@@ -1,0 +1,2 @@
+这是一个测试文件，用于验证 Git 连接是否正常。
+This is a test file to verify if Git connection is working.
