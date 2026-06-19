@@ -1,6 +1,6 @@
 # IA - 员工管理系统
 
-一个简单的员工管理系统，使用 Node.js + Express + SQL Server 构建。
+一个简单的员工管理系统，使用 Node.js + Express + SQL Server + Nginx 构建。
 
 ## 功能
 
@@ -12,19 +12,10 @@
 
 ## 快速开始
 
-### 1. 启动数据库
-
-使用 Docker Compose 启动 SQL Server：
+### 1. 一键启动所有服务
 
 ```bash
-# 启动数据库
-docker-compose --env-file .env.docker up -d
-
-# 查看状态
-docker-compose ps
-
-# 停止数据库
-docker-compose down
+docker-compose --env-file .env.docker up -d --build
 ```
 
 ### 2. 初始化数据库
@@ -52,20 +43,53 @@ INSERT INTO Employees (Name, Department, Salary, HireDate) VALUES
 "
 ```
 
-### 3. 启动应用
+### 3. 访问应用
 
-```bash
-# 安装依赖
-npm install
+- 本机访问：http://localhost
+- 局域网访问：http://<你的IP>
 
-# 启动服务
-npm start
+## 服务架构
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   Nginx     │────▶│  Node.js    │────▶│ SQL Server  │
+│   (80)      │     │  (3000)     │     │  (1433)     │
+└─────────────┘     └─────────────┘     └─────────────┘
+   前端静态文件        API 后端            数据库
 ```
 
-### 4. 访问应用
+## 常用命令
 
-- 本机访问：http://localhost:3000
-- 局域网访问：http://<你的IP>:3000
+```bash
+# 启动所有服务
+docker-compose --env-file .env.docker up -d --build
+
+# 停止所有服务
+docker-compose down
+
+# 查看服务状态
+docker-compose ps
+
+# 查看日志
+docker-compose logs -f
+
+# 重启某个服务
+docker-compose restart backend
+
+# 进入容器
+docker exec -it nginx-frontend sh
+docker exec -it node-backend sh
+docker exec -it sqlserver-demo bash
+
+# 连接数据库
+docker exec sqlserver-demo /opt/mssql-tools18/bin/sqlcmd -S localhost -U SA -P "YourStrong!Password123" -C
+
+# 备份数据库
+docker exec sqlserver-demo /opt/mssql-tools18/bin/sqlcmd -S localhost -U SA -P "YourStrong!Password123" -C -Q "BACKUP DATABASE DemoDB TO DISK='/var/opt/mssql/DemoDB.bak'"
+
+# 恢复数据库
+docker exec sqlserver-demo /opt/mssql-tools18/bin/sqlcmd -S localhost -U SA -P "YourStrong!Password123" -C -Q "RESTORE DATABASE DemoDB FROM DISK='/var/opt/mssql/DemoDB.bak'"
+```
 
 ## 配置
 
@@ -86,48 +110,24 @@ SA_PASSWORD=YourNewPassword123
 ### 数据库连接
 
 ```
-Server: localhost
+Server: sqlserver
 Database: DemoDB
 User: SA
 Password: YourStrong!Password123
 ```
 
-## Docker 常用命令
-
-```bash
-# 启动数据库
-docker-compose --env-file .env.docker up -d
-
-# 停止数据库
-docker-compose down
-
-# 查看日志
-docker-compose logs -f
-
-# 进入数据库容器
-docker exec -it sqlserver-demo bash
-
-# 连接数据库
-docker exec sqlserver-demo /opt/mssql-tools18/bin/sqlcmd -S localhost -U SA -P "YourStrong!Password123" -C
-
-# 备份数据库
-docker exec sqlserver-demo /opt/mssql-tools18/bin/sqlcmd -S localhost -U SA -P "YourStrong!Password123" -C -Q "BACKUP DATABASE DemoDB TO DISK='/var/opt/mssql/DemoDB.bak'"
-
-# 恢复数据库
-docker exec sqlserver-demo /opt/mssql-tools18/bin/sqlcmd -S localhost -U SA -P "YourStrong!Password123" -C -Q "RESTORE DATABASE DemoDB FROM DISK='/var/opt/mssql/DemoDB.bak'"
-```
-
 ## 防火墙配置
 
-如需局域网访问，需开放 3000 端口：
+如需局域网访问，需开放 80 端口：
 
 ```powershell
-netsh advfirewall firewall add rule name="Node.js Demo" dir=in action=allow protocol=TCP localport=3000
+netsh advfirewall firewall add rule name="Nginx Frontend" dir=in action=allow protocol=TCP localport=80
 ```
 
 ## 技术栈
 
-- Node.js + Express
-- SQL Server 2022
-- Docker
-- HTML + CSS + JavaScript
+- 前端：Vite + HTML + CSS + JavaScript
+- 后端：Node.js + Express
+- 数据库：SQL Server 2022
+- 反向代理：Nginx
+- 容器化：Docker Compose
