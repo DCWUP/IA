@@ -44,7 +44,7 @@ function renderTable() {
     document.getElementById('tableContainer').innerHTML = html;
 }
 
-function openModal(emp = null) {
+window.openModal = function(emp = null) {
     document.getElementById('modalTitle').textContent = emp ? '编辑员工' : '新增员工';
     document.getElementById('editId').value = emp ? emp.Id : '';
     document.getElementById('name').value = emp ? emp.Name : '';
@@ -54,17 +54,17 @@ function openModal(emp = null) {
     document.getElementById('modal').classList.add('active');
 }
 
-function closeModal() {
+window.closeModal = function() {
     document.getElementById('modal').classList.remove('active');
     document.getElementById('form').reset();
 }
 
-async function editEmployee(id) {
+window.editEmployee = async function(id) {
     const emp = employees.find(e => e.Id === id);
     openModal(emp);
 }
 
-async function handleSubmit(e) {
+window.handleSubmit = async function(e) {
     e.preventDefault();
     const id = document.getElementById('editId').value;
     const data = {
@@ -91,7 +91,7 @@ async function handleSubmit(e) {
     loadEmployees();
 }
 
-async function deleteEmployee(id) {
+window.deleteEmployee = async function(id) {
     if (confirm('确定删除该员工？')) {
         await fetch(`${API}/${id}`, { method: 'DELETE' });
         loadEmployees();
