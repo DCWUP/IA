@@ -1988,6 +1988,30 @@ function aigcBadgeHtml(rate) {
 }
 
 // ============================================================
+// Context bar (show outline + rules during writing)
+// ============================================================
+function updateContextBar() {
+  const bar = document.getElementById('contextBar');
+  if (!bar) return;
+  if (!data.outline && !data.rules.length) { bar.classList.remove('show'); return; }
+  bar.classList.add('show');
+  let html = '';
+  if (data.outline) {
+    const short = data.outline.length > 100 ? data.outline.substring(0, 100) + '…' : data.outline;
+    html += `<div class="ctx-section"><span class="ctx-label">大纲</span><span class="ctx-text">${escHtml(short)}</span></div>`;
+  }
+  if (data.rules.length) {
+    const rulesHtml = data.rules.map(r => {
+      const label = r.category ? `[${escHtml(r.category)}] ` : '';
+      const text = r.content.length > 60 ? r.content.substring(0, 60) + '…' : r.content;
+      return `<span class="ctx-rule">${label}${escHtml(text)}</span>`;
+    }).join('');
+    html += `<div class="ctx-section"><span class="ctx-label">规则</span>${rulesHtml}</div>`;
+  }
+  bar.innerHTML = html;
+}
+
+// ============================================================
 // Backup
 // ============================================================
 async function runBackup() {
