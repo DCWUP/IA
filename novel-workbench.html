@@ -152,13 +152,15 @@ body{
 .chapter-item .chapter-title{
   flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
-.chapter-item .chapter-del{
-  opacity:0;width:20px;height:20px;border:none;border-radius:4px;
+.chapter-item .chapter-actions{display:flex;gap:2px;opacity:0;transition:opacity .15s}
+.chapter-item:hover .chapter-actions{opacity:1}
+.chapter-item .chapter-actions button{
+  width:20px;height:20px;border:none;border-radius:4px;
   background:transparent;cursor:pointer;color:var(--text2);
-  font-size:14px;display:flex;align-items:center;justify-content:center;
+  font-size:12px;display:flex;align-items:center;justify-content:center;
   transition:all .15s;
 }
-.chapter-item:hover .chapter-del{opacity:1}
+.chapter-item .chapter-actions button:hover{background:var(--surface)}
 .chapter-item .chapter-del:hover{background:#ff6b6b;color:#fff}
 
 /* Center */
@@ -514,6 +516,7 @@ body{
     <span class="logo" onclick="switchNovel(null)" title="回到首页">&#9997; NovelForge</span>
     <div class="novel-selector">
       <select id="novelSelect" onchange="switchNovel(parseInt(this.value))"></select>
+      <button onclick="editNovelTitle()" title="修改小说名称">&#9998;</button>
       <button onclick="createNovelPrompt()" title="新建小说">+</button>
     </div>
   </div>
@@ -622,7 +625,7 @@ body{
 <!-- Add Chapter Modal -->
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
-    <h3>新增章节</h3>
+    <h3 id="chapterModalTitle">新增章节</h3>
     <input type="text" id="chapterTitleInput" placeholder="输入章节标题…" autofocus>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal()">取消</button>
@@ -684,6 +687,7 @@ let data = { chapters: [], outline: '', characters: [], rules: [] };
 let currentIndex = -1;
 let editorMode = 'editor';
 let editingCharIndex = -1;
+let editingChapterIndex = -1;
 let editingRuleId = null;
 let aigcCache = {};
 const editor = document.getElementById('editor');
@@ -907,7 +911,10 @@ function renderOutline() {
     <div class="chapter-item ${i === currentIndex ? 'active' : ''}" onclick="selectChapter(${i})">
       <span class="chapter-num">${i + 1}</span>
       <span class="chapter-title">${ch.title || '未命名章节'}</span>
-      <button class="chapter-del" onclick="event.stopPropagation();deleteChapter(${i})" title="删除章节">&#10005;</button>
+      <span class="chapter-actions">
+        <button class="chapter-edit" onclick="event.stopPropagation();editChapter(${i})" title="修改标题">&#9998;</button>
+        <button class="chapter-del" onclick="event.stopPropagation();deleteChapter(${i})" title="删除章节">&#10005;</button>
+      </span>
     </div>
   `).join('');
 }
@@ -935,8 +942,18 @@ function updateVersionHeader() {
 }
 
 function addChapter() {
+  editingChapterIndex = -1;
+  document.getElementById('chapterModalTitle').textContent = '新增章节';
   document.getElementById('modalOverlay').classList.add('open');
   document.getElementById('chapterTitleInput').value = '';
+  setTimeout(() => document.getElementById('chapterTitleInput').focus(), 100);
+}
+
+function editChapter(i) {
+  editingChapterIndex = i;
+  document.getElementById('chapterModalTitle').textContent = '修改章节标题';
+  document.getElementById('modalOverlay').classList.add('open');
+  document.getElementById('chapterTitleInput').value = data.chapters[i].title || '';
   setTimeout(() => document.getElementById('chapterTitleInput').focus(), 100);
 }
 
@@ -946,12 +963,40 @@ function closeModal() {
 
 function confirmAddChapter() {
   const title = document.getElementById('chapterTitleInput').value.trim() || ('第' + (data.chapters.length + 1) + '章');
-  data.chapters.push({ title, content: '# ' + title + '\n\n' });
+  if (editingChapterIndex >= 0) {
+    data.chapters[editingChapterIndex].title = title;
+    save();
+    renderOutline();
+    closeModal();
+    updateContextBar();
+    showToast('已更新标题「' + title + '」');
+  } else {
+    data.chapters.push({ title, content: '# ' + title + '\n\n' });
+    save();
+    selectChapter(data.chapters.length - 1);
+    closeModal();
+    updateContextBar();
+    showToast('已添加「' + title + '」');
+  }
+  if (backendOnline) syncToServer();
+}
+
+function editNovelTitle() {
+  const current = data.novelTitle || document.getElementById('novelSelect')?.selectedOptions?.[0]?.text || '未命名小说';
+  const title = prompt('修改小说名称：', current);
+  if (!title || title === current) return;
+  data.novelTitle = title;
   save();
-  selectChapter(data.chapters.length - 1);
-  closeModal();
-  updateContextBar();
-  showToast('已添加「' + title + '」');
+  if (backendOnline && novelId) {
+    fetch(API_BASE + '/novels/' + novelId, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ Title: title })
+    }).then(() => loadFromServer()).catch(() => {});
+  } else {
+    document.querySelector('#novelSelect option[selected]').textContent = title;
+    loadFromServer();
+  }
+  showToast('已更新为「' + title + '」');
 }
 
 function deleteChapter(i) {
