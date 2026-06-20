@@ -1,0 +1,33 @@
+-- Novel writing platform tables
+-- Run against DemoDB
+
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='Novels' AND xtype='U')
+CREATE TABLE Novels (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    Title NVARCHAR(200) NOT NULL,
+    Outline NVARCHAR(MAX),
+    CreatedAt DATETIME DEFAULT GETDATE(),
+    UpdatedAt DATETIME DEFAULT GETDATE()
+);
+
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='Chapters' AND xtype='U')
+CREATE TABLE Chapters (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    NovelId INT NOT NULL FOREIGN KEY REFERENCES Novels(Id) ON DELETE CASCADE,
+    Title NVARCHAR(200) NOT NULL,
+    Content NVARCHAR(MAX),
+    SortOrder INT NOT NULL DEFAULT 0,
+    CreatedAt DATETIME DEFAULT GETDATE(),
+    UpdatedAt DATETIME DEFAULT GETDATE()
+);
+
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='Characters' AND xtype='U')
+CREATE TABLE Characters (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    NovelId INT NOT NULL FOREIGN KEY REFERENCES Novels(Id) ON DELETE CASCADE,
+    Name NVARCHAR(100) NOT NULL,
+    Traits NVARCHAR(500),
+    Description NVARCHAR(MAX),
+    CreatedAt DATETIME DEFAULT GETDATE(),
+    UpdatedAt DATETIME DEFAULT GETDATE()
+);

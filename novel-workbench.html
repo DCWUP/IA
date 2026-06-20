@@ -1,0 +1,1640 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小说写作工作台</title>
+<style>
+:root {
+  --bg: #f8f9fa;
+  --surface: #ffffff;
+  --surface2: #f1f3f5;
+  --border: #dee2e6;
+  --text: #212529;
+  --text2: #6c757d;
+  --accent: #6c5ce7;
+  --accent-hover: #5a4bd1;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  --radius: 10px;
+  --font-mono: 'Cascadia Code', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  --font-ui: -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --editor-bg: #ffffff;
+  --preview-bg: #ffffff;
+}
+[data-theme="dark"] {
+  --bg: #1a1b2e;
+  --surface: #232540;
+  --surface2: #2a2d4a;
+  --border: #3a3d5c;
+  --text: #e4e6f0;
+  --text2: #9a9cb8;
+  --shadow: 0 1px 3px rgba(0,0,0,0.3);
+  --editor-bg: #1e1f38;
+  --preview-bg: #232540;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:var(--font-ui);
+  background:var(--bg);
+  color:var(--text);
+  height:100vh;
+  overflow:hidden;
+  transition:background .3s, color .3s;
+}
+/* Scrollbar */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text2)}
+
+/* Header */
+.header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:10px 20px;
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  box-shadow:var(--shadow);
+  position:relative;
+  z-index:10;
+}
+.header-left{display:flex;align-items:center;gap:12px}
+.logo{
+  font-size:18px;
+  font-weight:700;
+  background:linear-gradient(135deg,#6c5ce7,#a29bfe);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+.header-center{display:flex;gap:8px}
+.header-right{display:flex;align-items:center;gap:10px}
+
+/* Buttons */
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 16px;border-radius:8px;border:none;
+  font-size:13px;font-weight:500;cursor:pointer;
+  transition:all .2s;
+  font-family:var(--font-ui);
+  background:var(--surface2);color:var(--text);
+}
+.btn:hover{filter:brightness(0.92)}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent-hover)}
+.btn-sm{padding:5px 12px;font-size:12px}
+.icon-btn{
+  width:34px;height:34px;padding:0;
+  display:inline-flex;align-items:center;justify-content:center;
+  border-radius:8px;border:none;cursor:pointer;
+  background:var(--surface2);color:var(--text);
+  font-size:16px;transition:all .2s;
+}
+.icon-btn:hover{filter:brightness(0.92)}
+
+/* Layout */
+.layout{
+  display:flex;
+  height:calc(100vh - 56px);
+}
+/* Left panel */
+.panel-left{
+  width:260px;min-width:260px;
+  background:var(--surface);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+.panel-header{
+  padding:14px 16px 10px;
+  font-size:13px;font-weight:600;
+  color:var(--text2);
+  text-transform:uppercase;
+  letter-spacing:.5px;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.outline-tree{
+  flex:1;overflow-y:auto;padding:0 8px 12px;
+}
+.chapter-item{
+  display:flex;align-items:center;gap:8px;
+  padding:9px 12px;margin:2px 0;
+  border-radius:8px;cursor:pointer;
+  font-size:14px;transition:all .15s;
+  border-left:3px solid transparent;
+  user-select:none;
+}
+.chapter-item:hover{background:var(--surface2)}
+.chapter-item.active{
+  background:var(--surface2);
+  border-left-color:var(--accent);
+  color:var(--accent);font-weight:600;
+}
+.chapter-item .chapter-num{
+  font-size:11px;color:var(--text2);
+  font-weight:500;min-width:20px;
+}
+.chapter-item .chapter-title{
+  flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.chapter-item .chapter-del{
+  opacity:0;width:20px;height:20px;border:none;border-radius:4px;
+  background:transparent;cursor:pointer;color:var(--text2);
+  font-size:14px;display:flex;align-items:center;justify-content:center;
+  transition:all .15s;
+}
+.chapter-item:hover .chapter-del{opacity:1}
+.chapter-item .chapter-del:hover{background:#ff6b6b;color:#fff}
+
+/* Center */
+.panel-center{
+  flex:1;display:flex;flex-direction:column;
+  min-width:0;
+}
+.editor-tabs{
+  display:flex;align-items:center;
+  padding:8px 16px 0;
+  gap:4px;
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+}
+.editor-tab{
+  padding:8px 16px;font-size:13px;border-radius:8px 8px 0 0;
+  cursor:pointer;border:1px solid transparent;border-bottom:none;
+  background:transparent;color:var(--text2);
+  transition:all .15s;
+  font-family:var(--font-ui);
+  display:flex;align-items:center;gap:6px;
+}
+.editor-tab.active{
+  background:var(--editor-bg);
+  border-color:var(--border);
+  color:var(--text);
+  font-weight:600;
+}
+.editor-area{
+  flex:1;display:flex;
+  background:var(--editor-bg);
+  position:relative;
+}
+.editor-textarea{
+  flex:1;padding:20px 24px;
+  border:none;outline:none;resize:none;
+  font-family:var(--font-mono);
+  font-size:15px;line-height:1.8;
+  color:var(--text);background:transparent;
+  tab-size:2;
+}
+.editor-textarea::placeholder{color:var(--text2);opacity:.5}
+
+/* Right panel tabs */
+.panel-right{
+  width:400px;min-width:320px;
+  background:var(--preview-bg);
+  border-left:1px solid var(--border);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+.right-tabs{
+  display:flex;padding:0;margin:0;
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.right-tab{
+  flex:1;padding:10px 8px;text-align:center;
+  font-size:13px;font-weight:500;cursor:pointer;
+  color:var(--text2);border:none;background:transparent;
+  font-family:var(--font-ui);
+  border-bottom:2px solid transparent;
+  transition:all .15s;
+  position:relative;
+}
+.right-tab:hover{color:var(--text);background:var(--surface2)}
+.right-tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+
+.right-panel-body{flex:1;overflow:hidden;display:flex;flex-direction:column}
+.right-panel-body > div{display:none;flex-direction:column;height:100%}
+.right-panel-body > div.active{display:flex}
+
+/* Preview tab */
+.preview-header{
+  padding:14px 16px 10px;
+  font-size:13px;font-weight:600;
+  color:var(--text2);
+  text-transform:uppercase;
+  letter-spacing:.5px;
+  display:flex;justify-content:space-between;align-items:center;
+  flex-shrink:0;
+}
+.preview-content{
+  flex:1;overflow-y:auto;padding:20px 24px;
+}
+/* Markdown preview styles */
+.preview-content h1{font-size:26px;margin:0 0 16px;font-weight:700;border-bottom:2px solid var(--accent);padding-bottom:8px}
+.preview-content h2{font-size:22px;margin:24px 0 12px;font-weight:600}
+.preview-content h3{font-size:18px;margin:20px 0 10px;font-weight:600}
+.preview-content p{margin:0 0 14px;line-height:1.8}
+.preview-content ul,.preview-content ol{padding-left:24px;margin:0 0 14px}
+.preview-content li{margin:4px 0;line-height:1.7}
+.preview-content blockquote{
+  border-left:4px solid var(--accent);padding:8px 16px;
+  margin:0 0 14px;background:var(--surface2);border-radius:0 8px 8px 0;
+  color:var(--text2);
+}
+.preview-content code{
+  font-family:var(--font-mono);background:var(--surface2);
+  padding:2px 6px;border-radius:4px;font-size:.9em;
+}
+.preview-content pre{
+  background:var(--surface2);padding:16px;border-radius:8px;
+  overflow-x:auto;margin:0 0 14px;
+}
+.preview-content pre code{background:none;padding:0;border-radius:0}
+.preview-content hr{border:none;border-top:1px solid var(--border);margin:20px 0}
+.preview-content strong{font-weight:700}
+.preview-content em{font-style:italic}
+.preview-content a{color:var(--accent);text-decoration:none}
+.preview-content a:hover{text-decoration:underline}
+.preview-content img{max-width:100%;border-radius:8px;margin:8px 0}
+.preview-content table{border-collapse:collapse;width:100%;margin:0 0 14px}
+.preview-content th,.preview-content td{
+  border:1px solid var(--border);padding:8px 12px;text-align:left;
+}
+.preview-content th{background:var(--surface2);font-weight:600}
+
+/* Outline tab */
+.outline-tab-body{padding:0}
+.outline-textarea{
+  flex:1;padding:20px 24px;
+  border:none;outline:none;resize:none;
+  font-family:var(--font-mono);
+  font-size:14px;line-height:1.8;
+  color:var(--text);background:transparent;
+  width:100%;display:block;
+}
+.outline-textarea::placeholder{color:var(--text2);opacity:.5}
+.outline-header{
+  padding:14px 16px 10px;
+  font-size:13px;font-weight:600;
+  color:var(--text2);
+  text-transform:uppercase;
+  letter-spacing:.5px;
+  display:flex;justify-content:space-between;align-items:center;
+  flex-shrink:0;
+}
+
+/* Characters tab */
+.characters-header{
+  padding:14px 16px 10px;
+  font-size:13px;font-weight:600;
+  color:var(--text2);
+  text-transform:uppercase;
+  letter-spacing:.5px;
+  display:flex;justify-content:space-between;align-items:center;
+  flex-shrink:0;
+}
+.characters-list{
+  flex:1;overflow-y:auto;padding:4px 12px 12px;
+}
+.char-card{
+  background:var(--surface2);border-radius:10px;
+  padding:12px 14px;margin:6px 0;
+  cursor:pointer;transition:all .15s;
+  border:1px solid transparent;
+}
+.char-card:hover{border-color:var(--accent)}
+.char-card-header{
+  display:flex;align-items:center;justify-content:space-between;
+}
+.char-card-name{
+  font-size:15px;font-weight:600;color:var(--text);
+}
+.char-card-toggle{
+  color:var(--text2);font-size:12px;transition:transform .2s;
+}
+.char-card.open .char-card-toggle{transform:rotate(180deg)}
+.char-card-body{
+  max-height:0;overflow:hidden;
+  transition:max-height .3s ease, opacity .2s;
+  opacity:0;
+}
+.char-card.open .char-card-body{
+  max-height:500px;opacity:1;margin-top:10px;
+}
+.char-trait{
+  display:inline-block;
+  padding:3px 10px;margin:3px 4px 3px 0;
+  background:var(--accent);color:#fff;
+  border-radius:20px;font-size:12px;
+}
+.char-desc{
+  font-size:13px;color:var(--text2);margin-top:8px;line-height:1.6;
+}
+.char-card-actions{
+  display:flex;gap:6px;margin-top:10px;
+}
+.char-empty{
+  text-align:center;color:var(--text2);padding:40px 20px;
+  font-size:14px;
+}
+.char-empty-icon{font-size:40px;margin-bottom:12px;display:block}
+
+/* Stats bar */
+.stats-bar{
+  display:flex;gap:18px;
+  padding:8px 16px;
+  background:var(--surface);
+  border-top:1px solid var(--border);
+  font-size:12px;color:var(--text2);
+  flex-wrap:wrap;
+}
+.stats-bar .stat-item{
+  display:flex;align-items:center;gap:4px;
+}
+.stats-bar .stat-item .stat-val{font-weight:600;color:var(--text)}
+
+/* Modal */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,0.5);
+  display:flex;align-items:center;justify-content:center;
+  z-index:100;opacity:0;pointer-events:none;
+  transition:opacity .25s;
+}
+.modal-overlay.open{opacity:1;pointer-events:auto}
+.modal{
+  background:var(--surface);border-radius:14px;
+  padding:24px;min-width:360px;max-width:480px;
+  box-shadow:0 20px 60px rgba(0,0,0,0.3);
+}
+.modal h3{margin-bottom:16px;font-size:18px}
+.modal input{
+  width:100%;padding:10px 14px;border:1px solid var(--border);
+  border-radius:8px;background:var(--surface2);color:var(--text);
+  font-size:14px;margin-bottom:12px;font-family:var(--font-ui);
+  outline:none;transition:border .2s;
+}
+.modal input:focus{border-color:var(--accent)}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:4px}
+
+/* Toast */
+.toast{
+  position:fixed;bottom:30px;left:50%;transform:translateX(-50%);
+  background:var(--surface);color:var(--text);
+  padding:10px 24px;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,0.15);
+  font-size:14px;z-index:999;opacity:0;pointer-events:none;
+  transition:all .3s;border:1px solid var(--border);
+}
+.toast.show{opacity:1;pointer-events:auto;bottom:40px}
+
+/* resize handle */
+.resize-handle{
+  width:4px;cursor:col-resize;
+  background:transparent;
+  position:relative;flex-shrink:0;
+  transition:background .2s;
+}
+.resize-handle:hover,.resize-handle.active{
+  background:var(--accent);
+}
+
+/* Responsive */
+@media(max-width:900px){
+  .panel-right{display:none}
+  .panel-left{width:200px;min-width:200px}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <span class="logo">&#9997; NovelForge</span>
+  </div>
+  <div class="header-center">
+    <button class="btn btn-sm" onclick="addChapter()">+ 新增章节</button>
+    <button class="btn btn-sm" onclick="exportTxt()">导出 TXT</button>
+    <button class="btn btn-sm" onclick="exportEpub()">导出 EPUB</button>
+  </div>
+  <div class="header-right">
+    <span id="syncStatus" style="font-size:12px;color:var(--text2);display:none"></span>
+    <button class="btn btn-sm btn-primary" onclick="syncToServer()" id="syncBtn" title="同步到服务器">&#128259; 同步</button>
+    <button class="btn btn-sm" onclick="loadFromServer()" id="loadBtn" title="从服务器加载">&#128190; 加载</button>
+    <button class="icon-btn" onclick="toggleTheme()" title="切换主题">&#9790;</button>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- Left: Outline -->
+  <div class="panel-left">
+    <div class="panel-header">
+      <span>章节目录</span>
+      <button class="btn btn-sm" onclick="addChapter()">+</button>
+    </div>
+    <div class="outline-tree" id="outlineTree"></div>
+  </div>
+
+  <!-- Center: Editor -->
+  <div class="resize-handle" id="leftResize"></div>
+
+  <div class="panel-center">
+    <div class="editor-tabs">
+      <div class="editor-tab active" id="tabEditor" onclick="switchEditorTab('editor')">&#9998; 编辑</div>
+      <div class="editor-tab" id="tabSplit" onclick="switchEditorTab('split')">&#8646; 分栏</div>
+    </div>
+    <div class="editor-area" id="editorArea">
+      <textarea class="editor-textarea" id="editor" placeholder="开始写作…" spellcheck="true"></textarea>
+    </div>
+    <div class="stats-bar" id="statsBar">
+      <div class="stat-item">字数 <span class="stat-val" id="charCount">0</span></div>
+      <div class="stat-item">字符（不含空格）<span class="stat-val" id="charCountNoSpace">0</span></div>
+      <div class="stat-item">段落 <span class="stat-val" id="paraCount">0</span></div>
+      <div class="stat-item">阅读时长 <span class="stat-val" id="readTime">0 分钟</span></div>
+    </div>
+  </div>
+
+  <!-- Right: Preview / Outline / Characters -->
+  <div class="resize-handle" id="rightResize"></div>
+
+  <div class="panel-right" id="panelRight">
+    <div class="right-tabs">
+      <button class="right-tab active" data-tab="preview" onclick="switchRightTab('preview')">&#128065; 预览</button>
+      <button class="right-tab" data-tab="outline" onclick="switchRightTab('outline')">&#128214; 大纲</button>
+      <button class="right-tab" data-tab="characters" onclick="switchRightTab('characters')">&#128101; 人物</button>
+    </div>
+    <div class="right-panel-body">
+      <!-- Preview -->
+      <div class="active" id="rightPreview">
+        <div class="preview-header"><span>实时预览</span></div>
+        <div class="preview-content" id="preview"></div>
+      </div>
+      <!-- Outline -->
+      <div id="rightOutline">
+        <div class="outline-header"><span>小说大纲</span></div>
+        <textarea class="outline-textarea" id="outlineEditor" placeholder="在这里写下你的故事大纲…&#10;&#10;例如：&#10;- 故事背景&#10;- 主线剧情&#10;- 关键转折点&#10;- 结局设想"></textarea>
+      </div>
+      <!-- Characters -->
+      <div id="rightCharacters">
+        <div class="characters-header">
+          <span>人物列表</span>
+          <button class="btn btn-sm" onclick="showCharModal()">+ 添加人物</button>
+        </div>
+        <div class="characters-list" id="charactersList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Chapter Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h3>新增章节</h3>
+    <input type="text" id="chapterTitleInput" placeholder="输入章节标题…" autofocus>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="confirmAddChapter()">确定</button>
+    </div>
+  </div>
+</div>
+
+<!-- Character Modal -->
+<div class="modal-overlay" id="charModalOverlay">
+  <div class="modal">
+    <h3 id="charModalTitle">添加人物</h3>
+    <input type="text" id="charNameInput" placeholder="人物姓名…">
+    <input type="text" id="charTraitsInput" placeholder="性格特点（逗号分隔，如：勇敢,善良,固执）">
+    <textarea id="charDescInput" placeholder="人物简介…" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:14px;font-family:var(--font-ui);outline:none;resize:vertical;min-height:60px;margin-bottom:12px"></textarea>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeCharModal()">取消</button>
+      <button class="btn btn-primary" onclick="confirmChar()">确定</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// State
+// ============================================================
+const STORAGE_KEY = 'novelforge_data';
+const THEME_KEY = 'novelforge_theme';
+
+let data = { chapters: [], outline: '', characters: [] };
+let currentIndex = -1;
+let editorMode = 'editor'; // 'editor' | 'split'
+let editingCharIndex = -1;
+
+// ============================================================
+// Markdown parser (lightweight)
+// ============================================================
+function mdToHtml(md) {
+  if (!md) return '<p style="color:var(--text2)">等待内容…</p>';
+  let html = md
+    // escape html
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    // code block first
+    .replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
+      return `<pre><code>${code.trim()}</code></pre>`;
+    })
+    // inline code
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    // images
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">')
+    // links
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
+    // headings
+    .replace(/^###### (.+)$/gm, '<h6>$1</h6>')
+    .replace(/^##### (.+)$/gm, '<h5>$1</h5>')
+    .replace(/^#### (.+)$/gm, '<h4>$1</h4>')
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+    // horizontal rule
+    .replace(/^---$/gm, '<hr>')
+    .replace(/^\*\*\*$/gm, '<hr>')
+    // blockquote
+    .replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>')
+    // bold & italic
+    .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/___(.+?)___/g, '<strong><em>$1</em></strong>')
+    .replace(/__(.+?)__/g, '<strong>$1</strong>')
+    .replace(/_(.+?)_/g, '<em>$1</em>')
+    // strikethrough
+    .replace(/~~(.+?)~~/g, '<del>$1</del>')
+    // unordered list
+    .replace(/^[\*\-] (.+)$/gm, '<li>$1</li>')
+    // ordered list
+    .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
+    // paragraphs
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/\n/g, '<br>');
+
+  html = '<p>' + html + '</p>';
+  // wrap lists
+  html = html.replace(/(<li>.*?<\/li>)/gs, (m) => {
+    if (m.includes('<br>')) return m;
+    return '<ul>' + m + '</ul>';
+  });
+  // deduplicate nested <p><ul>
+  html = html.replace(/<p><ul>/g, '<ul>').replace(/<\/ul><\/p>/g, '</ul>');
+  // clean empty paragraphs
+  html = html.replace(/<p><\/p>/g, '');
+  // convert consecutive <li> into single <ul>
+  html = html.replace(/((?:<li>.*?<\/li>)+)/g, (m) => {
+    if (m.startsWith('<ul>')) return m;
+    return '<ul>' + m + '</ul>';
+  });
+  // wrap consecutive blockquotes
+  html = html.replace(/((?:<blockquote>.*?<\/blockquote>)+)/g, (m) => {
+    if (m.startsWith('<blockquote>')) {
+      const inner = m.replace(/<\/blockquote><blockquote>/g, '<br>');
+      return '<blockquote>' + inner.replace(/<\/?blockquote>/g, '') + '</blockquote>';
+    }
+    return m;
+  });
+  return html;
+}
+
+// ============================================================
+// Stats
+// ============================================================
+function updateStats(text) {
+  const chars = text.length;
+  const charsNoSpace = text.replace(/\s/g, '').length;
+  const paras = text.split(/\n\s*\n/).filter(p => p.trim()).length;
+  const words = text.replace(/[\u4e00-\u9fff]/g, ' ').split(/\s+/).filter(w => w.length > 0).length + (text.match(/[\u4e00-\u9fff]/g) || []).length;
+  // reading time: ~400 chinese chars or ~200 english words per minute
+  const readMin = Math.max(1, Math.round(words / 200));
+  document.getElementById('charCount').textContent = chars;
+  document.getElementById('charCountNoSpace').textContent = charsNoSpace;
+  document.getElementById('paraCount').textContent = paras;
+  document.getElementById('readTime').textContent = readMin + ' 分钟';
+}
+
+// ============================================================
+// Chapter management
+// ============================================================
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function load() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (raw) {
+    try { data = JSON.parse(raw); } catch(e) { data = { chapters: [], outline: '', characters: [] }; }
+  }
+  if (!data.chapters) data.chapters = [];
+  if (!data.outline) data.outline = '陆烬穿越到异世界，继承了一双能看透谎言的眼睛和少年故理的记忆，发现妹妹叶晚身披淡蓝色光晕，眉心嵌着银色长钉。原主人故理的遗愿是拯救叶晚。陆烬的生命只剩下三天，他必须在镜语阁中找到真相完成救赎。\n\n主线：\n- 陆烬适应新身体和眼睛能力\n- 调查故理死亡的真相\n- 揭开叶晚身上的秘密\n- 对抗镜语阁中的黑暗势力';
+  if (!data.characters) data.characters = [];
+  if (!data.chapters.length) {
+    data.chapters = [
+      { title: '第一章', content: `# 第一章
+
+红灯。
+
+陆烬开着车，车里安静得只剩下引擎的轰鸣声。副驾上，是那个笑起来眼睛像月牙的女孩，她看起来有些疲惫。
+
+"陆烬，"她轻声说："我们暂时分开一段时间，好吗？"
+
+他没有立刻回答，大脑像一台超级计算机，在一瞬间开始运作。
+
+绿灯亮了。
+
+陆烬缓缓发动了汽车，车速平稳。然后，用一种无比平静的语气，说出了那句将他打入地狱的话。
+
+"根据我们过去五年的相处模型，"他说，视线平视着前方："从逻辑上将，分手，确实是当前状况下，能让双方损失最小化的最优解。"
+
+他以为，这是一次完美的、基于事实的逻辑论证。
+
+他没有看到，身旁的女孩，在听到这句话时，眼中最后一丝星光，也消失了。
+
+他唯一看到的，是右手边那辆闯过红灯，轰鸣而来的失控了的渣土车。
+
+当巨大的冲击力将整个车厢挤压变形时，陆烬最后的意识，停留在了那张无比平静，甚至可以说得上是解脱了的脸上。
+
+我用我的最优解，杀死了她。
+
+......对不起。
+
+这是陆烬最后的念头。
+
+他本该就此消散，归于永恒的虚无。
+
+但，他听到了雨声。
+
+滴答...滴答...
+
+陆烬看见了。
+
+一个完全陌生的，由深色木头构成的天花板。
+
+"吱呀——"
+
+木门被推开了，一个瘦弱的少女走了进来，端着一碗冒着热气的汤药。
+
+然后，他看到了——
+
+少女的身上，笼罩着一层清澈的，如雨后天空般的淡蓝色光晕。
+
+那张干净稚嫩的脸上，眉心处，一枚闪烁着冰冷银光的虚幻长钉，正深深的嵌入其中。
+
+"哥，你醒了吗？先把药喝了吧。"少女开口，声音温柔，像窗外的雨。
+
+随着她的话语，一缕极淡的，紫罗兰色的雾气，从她的口中溢出，然后消散。
+
+陆烬的意识陷入了前所未有的混乱。
+
+就在这时，另一个声音，一个同属于这具身体，但又极其虚弱的声音，在他意识的最深处响起：
+
+"......别让她碰......"
+
+"......她在说谎......"
+
+声音中，没有愤怒，只有一种深入骨髓的、自嘲般的疲惫感。
+
+"......我只是...想看的更清楚......"
+
+"我试图用我的心，去共情那枚钉子...想看看它背后...藏着怎样的恶意..."
+
+一阵不属于陆烬的、仿佛灵魂被看穿的剧痛，从他的意识深处传来，灵魂被这剧痛不断碾压着。
+
+"......我看见了一片深渊....."
+
+"它...它反过来，也看到了我..."
+
+声音中带着无尽的绝望和不甘，像是濒临死亡前最后的喘息。
+
+"救...救救她...用...我的眼睛...和你...."
+
+话音未落，声音戛然而止，连同他最后的意识，彻底消失了。
+
+随着原主人最后一道意识防线的崩溃，一份名为故理的、整整十九年的记忆，变成了无数发光的，如星辰般悬浮的记忆碎片。
+
+这里，是故理的记忆宫殿，而陆烬，成了唯一的闯入者和......继承者。
+
+一个分不清是谁的声音响起："你想活下去吗？那就，继承它吧。"
+
+陆烬痛苦的抱着脑袋，记忆，开始放映。
+
+第一幕：天赋的原罪
+
+画面展开，是幼年的故理。
+
+故理第一次看到人的颜色，当他的眼睛看到慈爱的父母脸上，第一次浮现出代表虚伪和厌烦的紫色谎言，他忍不住开口指出了谎言，换来的是父亲惊恐的眼神和母亲口中吐出更加浓烈的紫色。
+
+——他明白了，眼睛的觉醒，是一种能力，也是一种诅咒。
+
+第二幕：镜语阁的异端
+
+画面切换，是少年故理在镜语阁的训练场上。教官让学员分析一块残留着恐惧情绪的血衣，所有的学员都在对照图谱，分析着能量数值。
+
+只有故理，他闭上了眼睛，试图用灵魂去体验那份恐惧背后的解脱与歉意。换来的，是教官的怒吼："认知痕迹是科学，不是你的臆想，故理，不要浪费你的眼睛！"
+
+第三幕：无力的正义
+
+画面再转，是他第一次勘察凶案的现场，当他满怀正义地指出了真凶，却看到负责案件的主事，不动声色的用一个谎言，轻易掩盖了真相。
+
+第四幕：唯一的真实
+
+画面最后，定格在了这个昏暗的房间中，是故理省吃俭用换来的银镯，戴在叶晚手上的场景。那一刻，少女脸上露出的纯粹，不带一丝紫色杂质，如雨后天空般清澈的蓝色光晕，是他在这个肮脏的世界里，看到的唯一干净的东西。
+
+这十九年的记忆，像一场浓缩的，充满挣扎的电影。陆烬不再是旁观者，他几乎亲身经历了故理所有的开心，挣扎，痛苦和绝望。
+
+然后，所有发光的记忆碎片，开始向陆烬奔涌而来。
+
+属于陆烬的灵魂，那份来自地球的，对逻辑和因果的执着，继承了故理的记忆。
+
+"轰！"
+
+最后的抵抗消失，他不再是单纯的陆烬，也不是那个已经泯灭意识的故理。
+
+他是继承了死者眼睛和记忆的陆烬。
+
+一声痛苦的闷哼，不受控制地从陆烬喉咙中发出。
+
+端着药碗的少女被吓了一跳，连忙走上前，用手拍了拍他的背，满是担忧地看着他："哥，你醒了？"
+
+他缓缓睁开那双继承来的眼睛，看着眼前这个名为叶晚的妹妹，感受着虚弱的身体和那段最后的遗言。
+
+他不知道他是谁，他只知道，那个临死前的交易，化作了全新的使命，落在了他的肩上。
+
+所有的一切，都尘埃落定。
+
+他张了张干裂的嘴，用尽全身的力气，从这具既熟悉又陌生的身体里，挤出了融合后的第一句话：
+
+"......我.....我没事。"
+
+陆烬揉揉发涨的脑袋，试图消化这些庞大的记忆。
+
+叶晚的眼睛落在了陆烬的左手手腕处，稚嫩的脸上流下两行泪水，哽咽道："哥哥，别骗我了，我已经长大了。到底发生了什么？"
+
+陆烬抬起手，手腕间，一个透明的沙漏闪烁着即将熄灭的微光。
+
+锚时沙漏，一个记录着人生命时间的手表状仪器，自从故理的眼睛觉醒之后，这个仪器便像文身一般，深深地刻在了手腕处。
+
+三天！
+
+沙漏中不断闪烁的光芒提醒着陆烬，他的生命，只剩下了三天！
+
+陆烬将衣袖放下，遮住了锚时沙漏，随即抬手拭去了叶晚眼角残留的泪水，轻声道："小晚，相信我吗？"
+
+融合了故理的记忆之后，这份对叶晚的情感，深深地刻入了陆烬的灵魂深处。
+
+叶晚抽泣地点点头："我只有哥哥了。"
+
+陆烬心头一震，说道："放心，我不会死的。"
+
+叶晚端来的汤药依旧冒着热气，陆烬端起一饮而尽，将空碗递到了叶晚手中。
+
+"小晚，快去休息吧，明天镜语阁就发薪水了，有了锚石，我的锚时沙漏还能补充。"陆烬晃了晃左手，故作轻松道。
+
+叶晚点点头，将空碗带出了房间。
+
+陆烬躺在床上，思绪万千。
+
+穿越，真是太可笑了。
+
+此时此刻，所有的逻辑和命题，在陆烬的眼中，都成了扎在心头的一把尖刀。
+
+锚时沙漏，镜语阁，以及，一双能够看透谎言与虚妄的眼睛，真是好复杂的命题。
+
+雨声，不知何时又大了起来，敲打着陆烬的心。他没有点灯，任由黑暗将他吞噬，平躺在冰冷的木板床上，空洞地望着天花板上那片熟悉的、属于另一个人的天花板。
+
+陆烬啊陆烬，你怎么没有死在车祸中呢，这个问题，像一个幽灵，在他脑中不断盘旋。
+
+死了，多好。
+
+死了，那份碾压灵魂的愧疚，就可以画上句号。
+
+死了，就不用在这不属于自己濒死的身体里，去面对另一个更加冰冷的世界。
+
+他缓缓地起身，走到了房间角落里那面蒙尘的铜镜前。
+
+陆烬看着镜中的自己，或者说，镜中的故理，身前围绕着一圈因为说谎而产生的紫色雾霭。
+
+"喂，"他对着镜子，用只有自己能听到的声音，像是在跟另一个人说话。
+
+"你后悔吗？"
+
+镜中的人没有回答，静静地看着他。
+
+雨声更大了，陆烬的质问，像是投进了深海，没有一丝涟漪。
+
+他缓缓伸出手，用属于陆烬的指尖，触碰着镜中属于故理的冰冷脸颊。
+
+在接触的瞬间，两段最深刻的执念，再次再他的灵魂中交汇。
+
+女孩眼中熄灭的星光。
+
+叶晚身前那片纯粹的、没有杂质的蓝色雾霭。
+
+一份是陆烬亲手摧毁的真实，另一份，是故理在这个世界中，唯一残存的真实。
+
+命题的最优解或许不是惩罚，这是......第二次机会。
+
+陆烬的痛苦和故理的遗愿，在这一刻，融合成了同一条沉重的锁链。
+
+他缓缓收回了手，脸上的自嘲消失，取而代之的，是一种前所未有的平静。
+
+他不再对着镜子说话，转过身，重新躺回床上。脑中，属于陆烬的痛苦回忆，被打包，封存，沉入了意识的最深处。
+
+遗忘？
+
+并不是。
+
+那是一块镇石，一块沉重的墓碑。
+
+现在，他是故理，也是另一个全新的陆烬。
+
+能够看透谎言的眼睛，在故理燃烧了所有锚时与陆烬的灵魂融合之后，产生了新的变化。
+
+逻辑溯因！
+
+这是，融入谎言，然后回到第一现场去成为受害者吗？
+
+"咚咚咚"
+
+敲门声打断了故理的思绪，打开门，一个身披雨衣的男人喘着粗气，胸前，佩戴着一枚拇指大小的镜子状的胸针。
+
+镜语阁的标志！
+
+"故师傅，不好了，王有财死了。"` }
+    ];
+  }
+  if (!data.characters.length) {
+    data.characters = [
+      { name: '陆烬', traits: ['理性', '冷静', '执着', '背负愧疚'], desc: '主角，穿越者。前世因理性至上的逻辑思维伤害了爱人，在车祸中穿越到异世界少年故理体内。继承了故理能看透谎言的眼睛和十九年记忆，生命只剩下三天。' },
+      { name: '故理', traits: ['敏感', '善良', '孤独', '共情'], desc: '身体原主，19岁。天生觉醒能看透谎言的眼睛，因过于共情而耗尽生命。临死前将眼睛和记忆托付给陆烬，唯一的遗愿是拯救妹妹叶晚。' },
+      { name: '叶晚', traits: ['温柔', '纯粹', '脆弱', '坚韧'], desc: '故理的妹妹，瘦弱的少女。身披纯粹的淡蓝色光晕代表真实，但眉心嵌着一枚银色长钉，身上有不明秘密。是故理在这个肮脏世界中看到的唯一干净的东西。' }
+    ];
+  }
+  save();
+}
+
+function renderOutline() {
+  const tree = document.getElementById('outlineTree');
+  tree.innerHTML = data.chapters.map((ch, i) => `
+    <div class="chapter-item ${i === currentIndex ? 'active' : ''}" onclick="selectChapter(${i})">
+      <span class="chapter-num">${i + 1}</span>
+      <span class="chapter-title">${ch.title || '未命名章节'}</span>
+      <button class="chapter-del" onclick="event.stopPropagation();deleteChapter(${i})" title="删除章节">&#10005;</button>
+    </div>
+  `).join('');
+}
+
+function selectChapter(i) {
+  // save current
+  if (currentIndex >= 0 && currentIndex < data.chapters.length) {
+    data.chapters[currentIndex].content = editor.value;
+  }
+  currentIndex = i;
+  renderOutline();
+  editor.value = data.chapters[i].content;
+  updatePreview();
+  updateStats(editor.value);
+}
+
+function addChapter() {
+  document.getElementById('modalOverlay').classList.add('open');
+  document.getElementById('chapterTitleInput').value = '';
+  setTimeout(() => document.getElementById('chapterTitleInput').focus(), 100);
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+function confirmAddChapter() {
+  const title = document.getElementById('chapterTitleInput').value.trim() || ('第' + (data.chapters.length + 1) + '章');
+  data.chapters.push({ title, content: '# ' + title + '\n\n' });
+  save();
+  selectChapter(data.chapters.length - 1);
+  closeModal();
+  showToast('已添加「' + title + '」');
+}
+
+function deleteChapter(i) {
+  if (data.chapters.length <= 1) {
+    showToast('至少保留一个章节');
+    return;
+  }
+  if (!confirm('确定删除「' + data.chapters[i].title + '」？')) return;
+  data.chapters.splice(i, 1);
+  if (currentIndex >= data.chapters.length) currentIndex = data.chapters.length - 1;
+  if (currentIndex === i && data.chapters.length > 0) currentIndex = Math.min(i, data.chapters.length - 1);
+  save();
+  if (data.chapters.length > 0) {
+    selectChapter(currentIndex >= 0 ? currentIndex : 0);
+  } else {
+    currentIndex = -1;
+    editor.value = '';
+    updatePreview();
+    updateStats('');
+    renderOutline();
+  }
+  showToast('章节已删除');
+}
+
+// ============================================================
+// Preview
+// ============================================================
+function updatePreview() {
+  const text = editor.value;
+  document.getElementById('preview').innerHTML = mdToHtml(text);
+  updateStats(text);
+}
+
+// ============================================================
+// Editor tab switching
+// ============================================================
+function switchEditorTab(mode) {
+  editorMode = mode;
+  document.getElementById('tabEditor').classList.toggle('active', mode === 'editor' || mode === 'split');
+  document.getElementById('tabSplit').classList.toggle('active', mode === 'split');
+  document.getElementById('panelRight').style.display = (mode === 'split') ? 'flex' : 'none';
+  // if split, resize editor to half
+  if (mode === 'split') {
+    document.getElementById('panelRight').style.display = 'flex';
+  }
+  updatePreview();
+}
+
+// ============================================================
+// Right panel tabs
+// ============================================================
+function switchRightTab(tab) {
+  document.querySelectorAll('.right-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  document.querySelectorAll('.right-panel-body > div').forEach(d => d.classList.toggle('active', d.id === 'right' + tab.charAt(0).toUpperCase() + tab.slice(1)));
+}
+
+// ============================================================
+// Outline auto-save
+// ============================================================
+const outlineEditor = document.getElementById('outlineEditor');
+let outlineTimeout;
+outlineEditor.addEventListener('input', () => {
+  clearTimeout(outlineTimeout);
+  outlineTimeout = setTimeout(() => {
+    data.outline = outlineEditor.value;
+    save();
+  }, 500);
+});
+
+// ============================================================
+// Character management
+// ============================================================
+function renderCharacters() {
+  const list = document.getElementById('charactersList');
+  if (!data.characters.length) {
+    list.innerHTML = '<div class="char-empty"><span class="char-empty-icon">&#128100;</span>暂无人物，点击上方按钮添加</div>';
+    return;
+  }
+  list.innerHTML = data.characters.map((ch, i) => `
+    <div class="char-card" onclick="toggleCharCard(this)">
+      <div class="char-card-header">
+        <span class="char-card-name">${escHtml(ch.name)}</span>
+        <span class="char-card-toggle">&#9660;</span>
+      </div>
+      <div class="char-card-body">
+        <div>${(ch.traits || []).map(t => `<span class="char-trait">${escHtml(t)}</span>`).join('')}</div>
+        ${ch.desc ? `<div class="char-desc">${escHtml(ch.desc)}</div>` : ''}
+        <div class="char-card-actions">
+          <button class="btn btn-sm" onclick="event.stopPropagation();editChar(${i})">&#9998; 编辑</button>
+          <button class="btn btn-sm" onclick="event.stopPropagation();deleteChar(${i})" style="color:#ff6b6b">&#10005; 删除</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleCharCard(el) {
+  el.classList.toggle('open');
+}
+
+function showCharModal() {
+  editingCharIndex = -1;
+  document.getElementById('charModalTitle').textContent = '添加人物';
+  document.getElementById('charNameInput').value = '';
+  document.getElementById('charTraitsInput').value = '';
+  document.getElementById('charDescInput').value = '';
+  document.getElementById('charModalOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('charNameInput').focus(), 100);
+}
+
+function editChar(i) {
+  editingCharIndex = i;
+  const ch = data.characters[i];
+  document.getElementById('charModalTitle').textContent = '编辑人物';
+  document.getElementById('charNameInput').value = ch.name;
+  document.getElementById('charTraitsInput').value = (ch.traits || []).join(', ');
+  document.getElementById('charDescInput').value = ch.desc || '';
+  document.getElementById('charModalOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('charNameInput').focus(), 100);
+}
+
+function closeCharModal() {
+  document.getElementById('charModalOverlay').classList.remove('open');
+}
+
+function confirmChar() {
+  const name = document.getElementById('charNameInput').value.trim();
+  if (!name) { showToast('请输入人物姓名'); return; }
+  const traits = document.getElementById('charTraitsInput').value.split(/[,，]/).map(s => s.trim()).filter(Boolean);
+  const desc = document.getElementById('charDescInput').value.trim();
+  if (editingCharIndex >= 0) {
+    data.characters[editingCharIndex] = { name, traits, desc };
+    showToast('已更新「' + name + '」');
+  } else {
+    data.characters.push({ name, traits, desc });
+    showToast('已添加「' + name + '」');
+  }
+  save();
+  renderCharacters();
+  closeCharModal();
+}
+
+function deleteChar(i) {
+  if (!confirm('确定删除「' + data.characters[i].name + '」？')) return;
+  data.characters.splice(i, 1);
+  save();
+  renderCharacters();
+  showToast('人物已删除');
+}
+
+function escHtml(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ============================================================
+// Theme
+// ============================================================
+function toggleTheme() {
+  const html = document.documentElement;
+  const cur = html.getAttribute('data-theme');
+  const next = cur === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem(THEME_KEY, next);
+}
+
+function loadTheme() {
+  const t = localStorage.getItem(THEME_KEY);
+  if (t) document.documentElement.setAttribute('data-theme', t);
+}
+
+// ============================================================
+// Export
+// ============================================================
+function getAllContent() {
+  // save current first
+  if (currentIndex >= 0 && currentIndex < data.chapters.length) {
+    data.chapters[currentIndex].content = editor.value;
+  }
+  return data.chapters;
+}
+
+function exportTxt() {
+  const chapters = getAllContent();
+  let text = chapters.map((ch, i) => {
+    const clean = ch.content.replace(/<[^>]*>/g, '');
+    return `【${ch.title}】\n\n${clean}\n\n`;
+  }).join('───\n\n');
+  download(text, 'novel.txt', 'text/plain;charset=utf-8');
+  showToast('TXT 已导出');
+}
+
+function exportEpub() {
+  const chapters = getAllContent();
+  // Build minimal EPUB (no external deps)
+  const title = 'My Novel';
+  const author = 'Author';
+
+  const chapterXhtml = chapters.map((ch, i) => {
+    const content = mdToHtml(ch.content);
+    return `<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><title>${escXml(ch.title)}</title></head>
+<body>
+  <h1>${escXml(ch.title)}</h1>
+  ${content}
+</body>
+</html>`;
+  });
+
+  const epubItems = chapters.map((ch, i) => ({
+    id: `chap${i+1}`,
+    href: `chap${i+1}.xhtml`,
+    media: 'application/xhtml+xml'
+  }));
+
+  const manifest = epubItems.map(it =>
+    `    <item id="${it.id}" href="${it.href}" media-type="${it.media}"/>`
+  ).join('\n');
+
+  const spine = epubItems.map(it =>
+    `    <itemref idref="${it.id}"/>`
+  ).join('\n');
+
+  const container = `<?xml version="1.0" encoding="utf-8"?>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:package:2010">
+  <rootfiles>
+    <rootfile full-path="content.opf" media-type="application/oebps-package+xml"/>
+  </rootfiles>
+</container>`;
+
+  const contentOpf = `<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="book-id" version="2.0">
+  <metadata>
+    <dc:title xmlns:dc="http://purl.org/dc/elements/1.1/">${escXml(title)}</dc:title>
+    <dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">${escXml(author)}</dc:creator>
+    <dc:language xmlns:dc="http://purl.org/dc/elements/1.1/">zh</dc:language>
+    <dc:identifier xmlns:dc="http://purl.org/dc/elements/1.1/" id="book-id">urn:uuid:${generateUUID()}</dc:identifier>
+  </metadata>
+  <manifest>
+${manifest}
+    <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
+  </manifest>
+  <spine toc="ncx">
+${spine}
+  </spine>
+</package>`;
+
+  const tocNcx = `<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN" "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd">
+<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
+  <head>
+    <meta name="dtb:uid" content="urn:uuid:${generateUUID()}"/>
+    <meta name="dtb:depth" content="1"/>
+    <meta name="dtb:totalPageCount" content="0"/>
+    <meta name="dtb:maxPageNumber" content="0"/>
+  </head>
+  <docTitle><text>${escXml(title)}</text></docTitle>
+  <navMap>
+${chapters.map((ch, i) => `    <navPoint id="navpoint-${i+1}" playOrder="${i+1}">
+      <navLabel><text>${escXml(ch.title)}</text></navLabel>
+      <content src="chap${i+1}.xhtml"/>
+    </navPoint>`).join('\n')}
+  </navMap>
+</ncx>`;
+
+  // Build zip using a simple approach: write EPUB as a blob with proper mime type
+  // Since we can't use JSZip, we create a minimal EPUB structure as a downloadable HTML file
+  // that contains all content (a "web epub" approach)
+  // Actually, let's use the Blob + EPUB MIME approach with a proper zip structure.
+  // For simplicity, generate a self-contained EPUB using the HTML application approach.
+  // True EPUB generation requires zip compression. We'll offer a "Save as HTML (EPUB-like)" fallback
+  // that preserves all content with proper structure.
+
+  // Use EPUB.js-like approach: create a downloadable .epub that's actually a zip.
+  // We'll use a simple zip implementation.
+  const zip = new SimpleZip();
+  zip.add('mimetype', 'application/epub+zip');
+  zip.add('META-INF/container.xml', container);
+  zip.add('OEBPS/content.opf', contentOpf);
+  zip.add('OEBPS/toc.ncx', tocNcx);
+  chapters.forEach((ch, i) => {
+    zip.add(`OEBPS/chap${i+1}.xhtml`, chapterXhtml[i]);
+  });
+
+  const blob = new Blob([zip.generate()], { type: 'application/epub+zip' });
+  downloadBlob(blob, 'novel.epub');
+  showToast('EPUB 已导出');
+}
+
+// Minimal in-memory ZIP implementation
+class SimpleZip {
+  constructor() {
+    this.files = [];
+    this.crcTable = [];
+    for (let n = 0; n < 256; n++) {
+      let c = n;
+      for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+      this.crcTable[n] = c;
+    }
+  }
+  crc32(str) {
+    const utf = unescape(encodeURIComponent(str));
+    let c = 0xffffffff;
+    for (let i = 0; i < utf.length; i++) c = this.crcTable[(c ^ utf.charCodeAt(i)) & 0xff] ^ (c >>> 8);
+    return (c ^ 0xffffffff) >>> 0;
+  }
+  add(path, content) {
+    const utf8 = unescape(encodeURIComponent(content));
+    this.files.push({ path, content, utf8, crc: this.crc32(content), size: utf8.length });
+  }
+  generate() {
+    const localHeaders = [];
+    const centralHeaders = [];
+    let offset = 0;
+    const dataParts = [];
+
+    const enc = (s) => unescape(encodeURIComponent(s));
+    const put16 = (dv, pos, v) => { dv.setUint16(pos, v, true); };
+    const put32 = (dv, pos, v) => { dv.setUint32(pos, v, true); };
+
+    for (const f of this.files) {
+      const nameBytes = enc(f.path);
+      const nameLen = nameBytes.length;
+
+      // Local file header
+      const localLen = 30 + nameLen + f.size;
+      const buf = new ArrayBuffer(localLen);
+      const dv = new DataView(buf);
+      put32(dv, 0, 0x04034b50); // signature
+      put16(dv, 4, 20); // version needed
+      put16(dv, 6, 0); // flags
+      put16(dv, 8, 0); // compression (stored)
+      put16(dv, 10, 0); // mod time
+      put16(dv, 12, 0); // mod date
+      put32(dv, 14, f.crc);
+      put32(dv, 18, f.size);
+      put32(dv, 22, f.size);
+      put16(dv, 26, nameLen);
+      put16(dv, 28, 0); // extra field length
+      // name
+      const nameView = new Uint8Array(buf, 30, nameLen);
+      for (let i = 0; i < nameLen; i++) nameView[i] = nameBytes.charCodeAt(i);
+      // content
+      const contentView = new Uint8Array(buf, 30 + nameLen, f.size);
+      for (let i = 0; i < f.size; i++) contentView[i] = f.utf8.charCodeAt(i);
+
+      dataParts.push(new Uint8Array(buf));
+      localHeaders.push({ offset, crc: f.crc, size: f.size, nameLen, nameBytes, localLen });
+      offset += localLen;
+    }
+
+    // Central directory
+    let cdOffset = offset;
+    for (const f of this.files) {
+      const nameBytes = enc(f.path);
+      const nameLen = nameBytes.length;
+      const lh = localHeaders.find(l => l.nameBytes === nameBytes);
+      const cdLen = 46 + nameLen;
+      const buf = new ArrayBuffer(cdLen);
+      const dv = new DataView(buf);
+      put32(dv, 0, 0x02014b50);
+      put16(dv, 4, 20);
+      put16(dv, 6, 20);
+      put16(dv, 8, 0);
+      put16(dv, 10, 0);
+      put16(dv, 12, 0);
+      put16(dv, 14, 0);
+      put32(dv, 16, f.crc);
+      put32(dv, 20, f.size);
+      put32(dv, 24, f.size);
+      put16(dv, 28, nameLen);
+      put16(dv, 30, 0);
+      put16(dv, 32, 0);
+      put16(dv, 34, 0);
+      put16(dv, 36, 0);
+      put32(dv, 38, 0);
+      put32(dv, 42, lh.offset);
+      const nameView = new Uint8Array(buf, 46, nameLen);
+      for (let i = 0; i < nameLen; i++) nameView[i] = nameBytes.charCodeAt(i);
+      dataParts.push(new Uint8Array(buf));
+      offset += cdLen;
+    }
+
+    // End of central directory
+    const eocdLen = 22;
+    const eocdBuf = new ArrayBuffer(eocdLen);
+    const eocdDv = new DataView(eocdBuf);
+    put32(eocdDv, 0, 0x06054b50);
+    put16(eocdDv, 4, 0);
+    put16(eocdDv, 6, 0);
+    put16(eocdDv, 8, this.files.length);
+    put16(eocdDv, 10, this.files.length);
+    put32(eocdDv, 12, offset - cdOffset);
+    put32(eocdDv, 16, cdOffset);
+    put16(eocdDv, 20, 0);
+    dataParts.push(new Uint8Array(eocdBuf));
+
+    const total = dataParts.reduce((sum, p) => sum + p.byteLength, 0);
+    const result = new Uint8Array(total);
+    let pos = 0;
+    for (const p of dataParts) {
+      result.set(p, pos);
+      pos += p.byteLength;
+    }
+    return result;
+  }
+}
+
+function escXml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function generateUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random()*16|0;
+    return (c==='x'?r:(r&0x3|0x8)).toString(16);
+  });
+}
+
+function download(content, filename, mime) {
+  const blob = new Blob([content], { type: mime });
+  downloadBlob(blob, filename);
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// ============================================================
+// Toast
+// ============================================================
+let toastTimer;
+
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+// ============================================================
+// Keyboard shortcuts
+// ============================================================
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+    e.preventDefault();
+    if (currentIndex >= 0 && currentIndex < data.chapters.length) {
+      data.chapters[currentIndex].content = editor.value;
+    }
+    save();
+    showToast('已保存');
+    autoSync();
+  }
+  // Escape modal
+  if (e.key === 'Escape') { closeModal(); closeCharModal(); }
+  // Enter to confirm modal
+  if (e.key === 'Enter' && document.getElementById('modalOverlay').classList.contains('open')) {
+    confirmAddChapter();
+  }
+  if (e.key === 'Enter' && document.getElementById('charModalOverlay').classList.contains('open')) {
+    confirmChar();
+  }
+});
+
+// ============================================================
+// Resize panels
+// ============================================================
+function makeResizable(handleId, targetSide, minWidth, maxWidth) {
+  const handle = document.getElementById(handleId);
+  let startX, startSize;
+
+  function onStart(e) {
+    const ev = e.touches ? e.touches[0] : e;
+    startX = ev.clientX;
+    const panel = targetSide === 'left'
+      ? handle.previousElementSibling
+      : handle.nextElementSibling;
+    startSize = panel.getBoundingClientRect().width;
+    handle.classList.add('active');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onEnd);
+    document.addEventListener('touchmove', onMove, { passive: true });
+    document.addEventListener('touchend', onEnd);
+  }
+
+  function onMove(e) {
+    const ev = e.touches ? e.touches[0] : e;
+    const dx = ev.clientX - startX;
+    const panel = targetSide === 'left'
+      ? handle.previousElementSibling
+      : handle.nextElementSibling;
+    let newSize = targetSide === 'left' ? startSize + dx : startSize - dx;
+    newSize = Math.max(minWidth, Math.min(maxWidth || 600, newSize));
+    panel.style.width = newSize + 'px';
+    panel.style.minWidth = newSize + 'px';
+    panel.style.maxWidth = newSize + 'px';
+  }
+
+  function onEnd() {
+    handle.classList.remove('active');
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onEnd);
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('touchend', onEnd);
+  }
+
+  handle.addEventListener('mousedown', onStart);
+  handle.addEventListener('touchstart', onStart, { passive: true });
+}
+
+// ============================================================
+// Auto-save on input
+// ============================================================
+const editor = document.getElementById('editor');
+let saveTimeout;
+
+editor.addEventListener('input', () => {
+  updatePreview();
+  clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(() => {
+    if (currentIndex >= 0 && currentIndex < data.chapters.length) {
+      data.chapters[currentIndex].content = editor.value;
+      save();
+      autoSync();
+    }
+  }, 500);
+});
+
+// ============================================================
+// Backend sync
+// ============================================================
+const API_BASE = 'http://localhost:80/api';
+let novelId = localStorage.getItem('novelforge_novelId') || null;
+let backendOnline = false;
+
+async function checkBackend() {
+  try {
+    const res = await fetch(API_BASE + '/novels', { method: 'HEAD', cache: 'no-cache' });
+    backendOnline = res.ok || res.status !== 404;
+  } catch {
+    backendOnline = false;
+  }
+  document.getElementById('syncBtn').style.opacity = backendOnline ? '1' : '0.4';
+  document.getElementById('loadBtn').style.opacity = backendOnline ? '1' : '0.4';
+  document.getElementById('syncStatus').style.display = backendOnline ? 'inline' : 'none';
+  if (backendOnline) setSyncStatus('在线');
+  else setSyncStatus('离线');
+  return backendOnline;
+}
+
+function setSyncStatus(msg, isError) {
+  const el = document.getElementById('syncStatus');
+  el.textContent = msg;
+  el.style.color = isError ? '#ff6b6b' : 'var(--text2)';
+}
+
+async function syncToServer() {
+  if (!backendOnline && !(await checkBackend())) {
+    showToast('服务器离线，无法同步');
+    return;
+  }
+  // Save current editor content first
+  if (currentIndex >= 0 && currentIndex < data.chapters.length) {
+    data.chapters[currentIndex].content = editor.value;
+  }
+  data.outline = outlineEditor.value;
+  save();
+
+  try {
+    setSyncStatus('同步中…');
+    document.getElementById('syncBtn').disabled = true;
+
+    // Create novel if no id yet
+    if (!novelId) {
+      const createRes = await fetch(API_BASE + '/novels', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ Title: data.novelTitle || '未命名小说' })
+      });
+      const createData = await createRes.json();
+      novelId = createData.id;
+      localStorage.setItem('novelforge_novelId', novelId);
+    }
+
+    // Sync full data
+    const syncRes = await fetch(API_BASE + '/novels/' + novelId + '/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        Outline: data.outline || '',
+        chapters: data.chapters.map(ch => ({ title: ch.title, content: ch.content })),
+        characters: data.characters
+      })
+    });
+    if (!syncRes.ok) throw new Error('同步失败');
+    setSyncStatus('已同步');
+    showToast('已同步到平台');
+  } catch (err) {
+    setSyncStatus('同步失败', true);
+    showToast('同步失败：' + err.message);
+  } finally {
+    document.getElementById('syncBtn').disabled = false;
+    setTimeout(() => { if (backendOnline) setSyncStatus('在线'); }, 3000);
+  }
+}
+
+async function loadFromServer() {
+  if (!backendOnline && !(await checkBackend())) {
+    showToast('服务器离线');
+    return;
+  }
+  if (!novelId) {
+    // List novels and pick one
+    try {
+      const res = await fetch(API_BASE + '/novels');
+      const novels = await res.json();
+      if (!novels.length) { showToast('服务器上暂无小说'); return; }
+      // Use the first one for simplicity
+      novelId = novels[0].Id;
+      localStorage.setItem('novelforge_novelId', novelId);
+    } catch {
+      showToast('无法获取小说列表');
+      return;
+    }
+  }
+  try {
+    setSyncStatus('加载中…');
+    const res = await fetch(API_BASE + '/novels/' + novelId);
+    if (!res.ok) throw new Error('加载失败');
+    const novel = await res.json();
+    data.outline = novel.Outline || '';
+    data.chapters = (novel.chapters || []).map(ch => ({ title: ch.Title, content: ch.Content }));
+    data.characters = (novel.characters || []).map(ch => ({
+      name: ch.Name, traits: (ch.Traits || '').split(',').map(s => s.trim()).filter(Boolean), desc: ch.Description
+    }));
+    save();
+    // Refresh UI
+    outlineEditor.value = data.outline;
+    renderCharacters();
+    if (data.chapters.length > 0) {
+      currentIndex = 0;
+      renderOutline();
+      editor.value = data.chapters[0].content;
+      updatePreview();
+      updateStats(editor.value);
+    } else {
+      currentIndex = -1;
+      renderOutline();
+      editor.value = '';
+      updatePreview();
+      updateStats('');
+    }
+    setSyncStatus('已加载');
+    showToast('已从服务器加载');
+  } catch (err) {
+    setSyncStatus('加载失败', true);
+    showToast('加载失败：' + err.message);
+  }
+  setTimeout(() => { if (backendOnline) setSyncStatus('在线'); }, 3000);
+}
+
+// Auto-sync to server (debounced)
+let autoSyncTimer;
+function autoSync() {
+  clearTimeout(autoSyncTimer);
+  autoSyncTimer = setTimeout(() => {
+    if (backendOnline) syncToServer();
+  }, 5000);
+}
+
+// ============================================================
+// Init
+// ============================================================
+function applyDataToUI() {
+  currentIndex = 0;
+  renderOutline();
+  if (data.chapters.length > 0) {
+    editor.value = data.chapters[0].content;
+    updatePreview();
+    updateStats(editor.value);
+  } else {
+    editor.value = '';
+    updatePreview();
+    updateStats('');
+  }
+  outlineEditor.value = data.outline || '';
+  renderCharacters();
+}
+
+function init() {
+  loadTheme();
+  // Always load localStorage defaults first
+  load();
+  applyDataToUI();
+  // Then try to pull from server for freshest data
+  checkBackend().then(online => {
+    if (online) {
+      novelId = localStorage.getItem('novelforge_novelId') || 1;
+      localStorage.setItem('novelforge_novelId', novelId);
+      loadFromServer();
+    }
+  });
+  makeResizable('leftResize', 'left', 160, 400);
+  makeResizable('rightResize', 'right', 280, 600);
+}
+
+init();
+</script>
+</body>
+</html>
