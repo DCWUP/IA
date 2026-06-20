@@ -2089,25 +2089,28 @@ function applyDataToUI() {
   updateVersionHeader();
 }
 
-function init() {
+async function init() {
   loadTheme();
   makeResizable('leftResize', 'left', 160, 400);
   makeResizable('rightResize', 'right', 280, 600);
-  checkBackend().then(online => {
-    if (online) {
-      const stored = localStorage.getItem('novelforge_novelId');
-      if (stored) novelId = parseInt(stored);
-      loadFromServer();
-      setTimeout(() => {
-        if (currentIndex >= 0) fetchChapterVersions(currentIndex);
-        refreshBackupList();
-        loadBackupConfig();
-      }, 500);
-    } else {
-      load();
-      applyDataToUI();
+  const online = await checkBackend();
+  if (online) {
+    const stored = localStorage.getItem('novelforge_novelId');
+    if (stored) novelId = parseInt(stored);
+    try {
+      await loadFromServer();
+    } catch (e) {
+      setSyncStatus('加载失败', true);
     }
-  });
+    setTimeout(() => {
+      if (currentIndex >= 0) fetchChapterVersions(currentIndex);
+      refreshBackupList();
+      loadBackupConfig();
+    }, 500);
+  } else {
+    load();
+    applyDataToUI();
+  }
 }
 
 init();
