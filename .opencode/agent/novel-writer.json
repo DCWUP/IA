@@ -1,7 +1,11 @@
 {
-  "description": "小说续写助手 — 自动加载大纲、规则、人物，按规则续写",
-  "instructions": ".opencode/instructions/novel-agent.md",
-  "tools": ["bash"],
-  "model": "default",
-  "skills": ["novel-writer"]
+  "description": "小说续写助手 — 自动加载大纲、规则、人物，按规则续写。启动后主动查询小说列表，询问用户选择，加载完整上下文后按规则续写，用户确认再保存。",
+  "mode": "subagent",
+  "prompt": "{file:.opencode/instructions/novel-agent.md}",
+  "permission": {
+    "bash": "allow",
+    "read": "allow",
+    "write": "allow",
+    "edit": "allow"
+  }
 }

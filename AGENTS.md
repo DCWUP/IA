@@ -75,15 +75,20 @@ git push origin main
 
 ```
 .opencode/
-├── agent/novel-writer.json       # agent 定义
+├── agent/novel-writer.json       # @novel-writer agent 定义
 ├── instructions/novel-agent.md   # 系统指令（会话默认读取）
-└── skills/novel-writer/          # 可复用的续写技能
+└── skills/novel-writer/
+    └── SKILL.md                  # 可复用的续写技能
 ```
 
-**工作流**：
-1. 会话启动 → AI 自动 `GET /api/novels` 列出小说，询问"你要续写哪本？"
-2. 用户选定 → AI 加载大纲、章节、人物、规则
-3. 用户给出续写指令 → AI 遵守规则续写，用户确认后保存
+**工作流**（会话启动后自动触发）：
+1. AI 主动调用 `GET /api/novels` 列出所有小说，询问"你要续写哪本？"
+2. 用户选定 → AI 自动加载大纲、章节、人物、规则
+3. 用户给出续写指令 → AI 遵守规则续写 → 用户确认后保存
 4. 每个会话独立管理一本小说，可随时切换
 
-**注意**：需要 nginx 和 FastAPI 后端运行（`docker compose up -d` + FastAPI 在 8000 端口）
+**两种使用方式**：
+- **默认生效**：在新会话中直接开始，AI 会在第一条消息主动询问
+- **@ 调用**：在已有会话中输入 `@novel-writer 续写小说` 启动专用 agent
+
+**注意**：需要 nginx 容器运行 + FastAPI 进程在 8000 端口
