@@ -5,3 +5,12 @@ client/dist/
 .env.docker.local
 __pycache__/
 *.pyc
+
+# Novel content (stored in database, not repo)
+.novel/
+
+# Database backups
+backups/
+
+# Generated test files
+test_cogvideox.py
