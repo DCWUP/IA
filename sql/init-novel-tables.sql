@@ -31,3 +31,25 @@ CREATE TABLE Characters (
     CreatedAt DATETIME DEFAULT GETDATE(),
     UpdatedAt DATETIME DEFAULT GETDATE()
 );
+
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='Versions' AND xtype='U')
+CREATE TABLE Versions (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    NovelId INT NOT NULL FOREIGN KEY REFERENCES Novels(Id) ON DELETE CASCADE,
+    VersionNumber INT NOT NULL,
+    Label NVARCHAR(200),
+    Snapshot NVARCHAR(MAX) NOT NULL,
+    CreatedAt DATETIME DEFAULT GETDATE()
+);
+
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='ChapterVersions' AND xtype='U')
+CREATE TABLE ChapterVersions (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    NovelId INT NOT NULL FOREIGN KEY REFERENCES Novels(Id) ON DELETE CASCADE,
+    ChapterIndex INT NOT NULL,
+    VersionNumber INT NOT NULL,
+    Content NVARCHAR(MAX) NOT NULL,
+    Label NVARCHAR(200),
+    TitleSnapshot NVARCHAR(200),
+    CreatedAt DATETIME DEFAULT GETDATE()
+);

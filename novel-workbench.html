@@ -340,6 +340,60 @@ body{
 }
 .char-empty-icon{font-size:40px;margin-bottom:12px;display:block}
 
+/* Versions tab */
+.versions-header{
+  padding:14px 16px 10px;
+  font-size:13px;font-weight:600;
+  color:var(--text2);
+  text-transform:uppercase;
+  letter-spacing:.5px;
+  display:flex;justify-content:space-between;align-items:center;
+  flex-shrink:0;
+}
+.versions-list{flex:1;overflow-y:auto;padding:4px 12px 12px}
+.ver-item{
+  display:flex;align-items:center;padding:10px 12px;margin:3px 0;
+  border-radius:8px;cursor:pointer;transition:all .15s;
+  background:var(--surface2);gap:10px;
+}
+.ver-item:hover{border-color:var(--accent)}
+.ver-item .ver-num{
+  font-weight:700;color:var(--accent);font-size:13px;min-width:28px;
+}
+.ver-item .ver-info{flex:1;min-width:0}
+.ver-item .ver-label{font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ver-item .ver-date{font-size:11px;color:var(--text2);margin-top:2px}
+.ver-item .ver-diff-btn{
+  padding:4px 10px;border-radius:6px;border:none;
+  background:var(--surface);color:var(--accent);cursor:pointer;
+  font-size:12px;transition:all .15s;
+}
+.ver-item .ver-diff-btn:hover{background:var(--accent);color:#fff}
+.ver-item .ver-restore-btn{
+  padding:4px 10px;border-radius:6px;border:none;
+  background:#28a745;color:#fff;cursor:pointer;
+  font-size:12px;transition:all .15s;
+}
+.ver-item .ver-restore-btn:hover{filter:brightness(1.15)}
+.ver-empty{text-align:center;color:var(--text2);padding:40px 20px;font-size:14px}
+
+/* Diff panel */
+.diff-panel{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.diff-header{
+  padding:10px 14px;display:flex;align-items:center;gap:10px;
+  border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.diff-title{font-size:13px;font-weight:600;color:var(--text)}
+.diff-content{flex:1;overflow-y:auto;padding:12px 16px;font-family:var(--font-mono);font-size:13px;line-height:1.6}
+.diff-line{padding:2px 8px;border-radius:3px;margin:1px 0;white-space:pre-wrap;word-break:break-all}
+.diff-line.add{background:rgba(40,167,69,0.15);color:#28a745}
+.diff-line.add::before{content:"+ ";font-weight:700}
+.diff-line.rem{background:rgba(220,53,69,0.15);color:#dc3545}
+.diff-line.rem::before{content:"- ";font-weight:700}
+.diff-line.ctx{color:var(--text2)}
+.diff-line.ctx::before{content:"  "}
+.diff-header-info{font-size:11px;color:var(--text2);margin-left:auto}
+
 /* Stats bar */
 .stats-bar{
   display:flex;gap:18px;
@@ -418,7 +472,7 @@ body{
   </div>
   <div class="header-right">
     <span id="syncStatus" style="font-size:12px;color:var(--text2);display:none"></span>
-    <button class="btn btn-sm btn-primary" onclick="syncToServer()" id="syncBtn" title="同步到服务器">&#128259; 同步</button>
+    <button class="btn btn-sm btn-primary" onclick="manualSync()" id="syncBtn" title="创建版本并同步到服务器">&#128259; 提交版本</button>
     <button class="btn btn-sm" onclick="loadFromServer()" id="loadBtn" title="从服务器加载">&#128190; 加载</button>
     <button class="icon-btn" onclick="toggleTheme()" title="切换主题">&#9790;</button>
   </div>
@@ -461,6 +515,7 @@ body{
       <button class="right-tab active" data-tab="preview" onclick="switchRightTab('preview')">&#128065; 预览</button>
       <button class="right-tab" data-tab="outline" onclick="switchRightTab('outline')">&#128214; 大纲</button>
       <button class="right-tab" data-tab="characters" onclick="switchRightTab('characters')">&#128101; 人物</button>
+      <button class="right-tab" data-tab="versions" onclick="switchRightTab('versions')">&#128196; 版本</button>
     </div>
     <div class="right-panel-body">
       <!-- Preview -->
@@ -480,6 +535,22 @@ body{
           <button class="btn btn-sm" onclick="showCharModal()">+ 添加人物</button>
         </div>
         <div class="characters-list" id="charactersList"></div>
+      </div>
+      <!-- Versions -->
+      <div id="rightVersions">
+        <div class="versions-header">
+          <span>版本历史</span>
+          <button class="btn btn-sm btn-primary" onclick="showCreateVersionModal()">+ 创建版本</button>
+        </div>
+        <div class="versions-list" id="versionsList"></div>
+        <div class="diff-panel" id="diffPanel" style="display:none">
+          <div class="diff-header">
+            <button class="btn btn-sm" onclick="closeDiff()">&#8592; 返回</button>
+            <span class="diff-title" id="diffTitle">差异对比</span>
+            <button class="btn btn-sm btn-primary" id="restoreFromDiffBtn" style="margin-left:auto" onclick="restoreCurrentVersion()">&#8617; 恢复到该版本</button>
+          </div>
+          <div class="diff-content" id="diffContent"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -507,6 +578,18 @@ body{
     <div class="modal-actions">
       <button class="btn" onclick="closeCharModal()">取消</button>
       <button class="btn btn-primary" onclick="confirmChar()">确定</button>
+    </div>
+  </div>
+</div>
+
+<!-- Create Version Modal -->
+<div class="modal-overlay" id="verModalOverlay">
+  <div class="modal">
+    <h3>创建版本</h3>
+    <input type="text" id="verLabelInput" placeholder="版本说明（如：完成第一章初稿）" autofocus>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeVerModal()">取消</button>
+      <button class="btn btn-primary" onclick="confirmCreateVersion()">确定</button>
     </div>
   </div>
 </div>
@@ -896,6 +979,16 @@ function selectChapter(i) {
   editor.value = data.chapters[i].content;
   updatePreview();
   updateStats(editor.value);
+  // Reload versions for this chapter
+  if (backendOnline && novelId) fetchChapterVersions(i);
+  // Update version header
+  updateVersionHeader();
+}
+
+function updateVersionHeader() {
+  const ch = data.chapters[currentIndex];
+  const header = document.querySelector('.versions-header span');
+  if (header) header.textContent = '版本历史' + (ch ? ' - ' + ch.title : '');
 }
 
 function addChapter() {
@@ -1068,6 +1161,193 @@ function deleteChar(i) {
 function escHtml(s) {
   if (!s) return '';
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ============================================================
+// Version management (per-chapter)
+// ============================================================
+let chapterVersions = [];
+let viewingDiff = false;
+let currentDiffVerId = null;
+let currentDiffVerNum = null;
+
+function showCreateVersionModal() {
+  if (currentIndex < 0) { showToast('请先选择一个章节'); return; }
+  document.getElementById('verLabelInput').value = '';
+  document.getElementById('verModalOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('verLabelInput').focus(), 100);
+}
+function closeVerModal() { document.getElementById('verModalOverlay').classList.remove('open'); }
+
+async function confirmCreateVersion() {
+  const label = document.getElementById('verLabelInput').value.trim() || ('v' + (chapterVersions.length + 1));
+  if (!backendOnline) { showToast('服务器离线，无法创建版本'); closeVerModal(); return; }
+  // Save current editor content
+  data.chapters[currentIndex].content = editor.value;
+  save();
+  await syncToServer(); // ensure chapter data is synced first
+  await fetchChapterVersions(currentIndex, true, label, data.chapters[currentIndex].title);
+  closeVerModal();
+  showToast('章节版本已创建：' + label);
+}
+
+async function fetchChapterVersions(chapterIdx, createNew, label, title) {
+  if (!backendOnline || !novelId || chapterIdx < 0) return;
+  try {
+    if (createNew) {
+      const ch = data.chapters[chapterIdx];
+      await fetch(API_BASE + '/novels/' + novelId + '/chapters/' + chapterIdx + '/versions', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ Content: ch.content || '', Label: label || '', Title: title || ch.title || '' })
+      });
+    }
+    const res = await fetch(API_BASE + '/novels/' + novelId + '/chapters/' + chapterIdx + '/versions');
+    chapterVersions = await res.json();
+    renderVersions();
+  } catch {}
+}
+
+function renderVersions() {
+  const list = document.getElementById('versionsList');
+  const ch = data.chapters[currentIndex];
+  const chTitle = ch ? ch.title : '';
+  if (!chapterVersions.length) {
+    list.innerHTML = '<div class="ver-empty">「' + escHtml(chTitle) + '」暂无版本记录<br>点击上方「创建版本」保存当前章节快照</div>';
+    return;
+  }
+  list.innerHTML = chapterVersions.map(v => {
+    const d = new Date(v.CreatedAt);
+    const dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const vLabel = v.Label || '自动保存';
+    const vTitle = v.TitleSnapshot ? '「' + v.TitleSnapshot + '」' : '';
+    return `<div class="ver-item">
+      <span class="ver-num">v${v.VersionNumber}</span>
+      <div class="ver-info">
+        <div class="ver-label">${escHtml(vLabel)} ${escHtml(vTitle)}</div>
+        <div class="ver-date">${dateStr}</div>
+      </div>
+      <button class="ver-diff-btn" onclick="event.stopPropagation();showDiff(${v.Id}, ${v.VersionNumber})">对比</button>
+      <button class="ver-restore-btn" onclick="event.stopPropagation();restoreVersion(${v.Id}, ${v.VersionNumber})">恢复</button>
+    </div>`;
+  }).join('');
+}
+
+async function showDiff(verId, verNum) {
+  if (!backendOnline) { showToast('服务器离线'); return; }
+  try {
+    const res = await fetch(API_BASE + '/novels/' + novelId + '/chapters/' + currentIndex + '/versions/' + verId);
+    const ver = await res.json();
+    const oldContent = ver.Content || '';
+
+    // Current chapter content
+    const currentContent = data.chapters[currentIndex]?.content || editor.value;
+
+    document.getElementById('versionsList').style.display = 'none';
+    document.getElementById('diffPanel').style.display = 'flex';
+    const chTitle = data.chapters[currentIndex]?.title || '';
+    document.getElementById('diffTitle').textContent = 'v' + verNum + ' → 当前（' + chTitle + '）';
+    document.getElementById('diffContent').innerHTML = computeDiff(oldContent, currentContent);
+    document.getElementById('restoreFromDiffBtn').textContent = '↩ 恢复到 v' + verNum;
+    viewingDiff = true;
+    currentDiffVerId = verId;
+    currentDiffVerNum = verNum;
+  } catch (err) {
+    showToast('加载版本失败');
+  }
+}
+
+function closeDiff() {
+  document.getElementById('diffPanel').style.display = 'none';
+  document.getElementById('versionsList').style.display = '';
+  viewingDiff = false;
+  currentDiffVerId = null;
+  currentDiffVerNum = null;
+}
+
+function restoreCurrentVersion() {
+  if (currentDiffVerId) restoreVersion(currentDiffVerId, currentDiffVerNum);
+}
+
+async function restoreVersion(verId, verNum) {
+  if (!confirm('将把当前章节恢复到 v' + verNum + ' 的内容，当前修改将丢失。\n\n确定要继续吗？')) return;
+  if (!backendOnline) { showToast('服务器离线'); return; }
+  try {
+    showToast('正在恢复 v' + verNum + '…');
+    const res = await fetch(API_BASE + '/novels/' + novelId + '/chapters/' + currentIndex + '/versions/' + verId);
+    const ver = await res.json();
+
+    // Restore just this chapter's content
+    data.chapters[currentIndex].content = ver.Content || '';
+    save();
+    editor.value = data.chapters[currentIndex].content;
+    updatePreview();
+    updateStats(editor.value);
+    closeDiff();
+    showToast('已恢复到 v' + verNum);
+  } catch (err) {
+    showToast('恢复失败：' + err.message);
+  }
+}
+
+function computeDiff(oldText, newText) {
+  const oldLines = oldText.split('\n');
+  const newLines = newText.split('\n');
+  const dp = Array(oldLines.length + 1).fill(null).map(() => Array(newLines.length + 1).fill(0));
+  for (let i = 1; i <= oldLines.length; i++) {
+    for (let j = 1; j <= newLines.length; j++) {
+      if (oldLines[i-1] === newLines[j-1]) dp[i][j] = dp[i-1][j-1] + 1;
+      else dp[i][j] = Math.max(dp[i-1][j], dp[i][j-1]);
+    }
+  }
+  let i = oldLines.length, j = newLines.length;
+  const stack = [];
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && oldLines[i-1] === newLines[j-1]) {
+      stack.push({ type: 'ctx', line: oldLines[i-1] }); i--; j--;
+    } else if (j > 0 && (i === 0 || dp[i][j-1] >= dp[i-1][j])) {
+      stack.push({ type: 'add', line: newLines[j-1] }); j--;
+    } else {
+      stack.push({ type: 'rem', line: oldLines[i-1] }); i--;
+    }
+  }
+  stack.reverse();
+  let addCount = 0, remCount = 0;
+  const lines = stack.map(s => {
+    if (s.type === 'add') addCount++;
+    if (s.type === 'rem') remCount++;
+    return `<div class="diff-line ${s.type}">${escHtml(s.line) || '&nbsp;'}</div>`;
+  }).join('');
+
+  const info = `<div class="diff-header-info">+${addCount} / -${remCount} 行</div>`;
+  document.querySelector('.diff-header .diff-header-info')?.remove();
+  const header = document.querySelector('.diff-header');
+  if (header) header.insertAdjacentHTML('beforeend', info);
+
+  return lines || '<div style="color:var(--text2);text-align:center;padding:20px">无差异</div>';
+}
+
+async function manualSync() {
+  if (currentIndex < 0) { showToast('请先选择一个章节'); return; }
+  // Save current editor first
+  data.chapters[currentIndex].content = editor.value;
+  data.outline = outlineEditor.value;
+  save();
+  // Sync data to server
+  await syncToServer();
+  // Create chapter version
+  if (backendOnline && novelId) {
+    const label = '手动保存 v' + (chapterVersions.length + 1);
+    await fetch(API_BASE + '/novels/' + novelId + '/chapters/' + currentIndex + '/versions', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        Content: data.chapters[currentIndex].content,
+        Label: label,
+        Title: data.chapters[currentIndex].title
+      })
+    });
+    await fetchChapterVersions(currentIndex);
+    showToast('章节版本已提交：' + label);
+  }
 }
 
 // ============================================================
@@ -1378,13 +1658,16 @@ document.addEventListener('keydown', (e) => {
     autoSync();
   }
   // Escape modal
-  if (e.key === 'Escape') { closeModal(); closeCharModal(); }
+  if (e.key === 'Escape') { closeModal(); closeCharModal(); closeVerModal(); }
   // Enter to confirm modal
   if (e.key === 'Enter' && document.getElementById('modalOverlay').classList.contains('open')) {
     confirmAddChapter();
   }
   if (e.key === 'Enter' && document.getElementById('charModalOverlay').classList.contains('open')) {
     confirmChar();
+  }
+  if (e.key === 'Enter' && document.getElementById('verModalOverlay').classList.contains('open')) {
+    confirmCreateVersion();
   }
 });
 
@@ -1589,14 +1872,25 @@ async function loadFromServer() {
   setTimeout(() => { if (backendOnline) setSyncStatus('在线'); }, 3000);
 }
 
-// Auto-sync to server (debounced)
+// Auto-sync to server: 15s periodic + debounced on input
 let autoSyncTimer;
 function autoSync() {
   clearTimeout(autoSyncTimer);
   autoSyncTimer = setTimeout(() => {
     if (backendOnline) syncToServer();
-  }, 5000);
+  }, 3000);
 }
+// 15-second periodic save to database
+setInterval(() => {
+  if (backendOnline) {
+    if (currentIndex >= 0 && currentIndex < data.chapters.length) {
+      data.chapters[currentIndex].content = editor.value;
+    }
+    data.outline = outlineEditor.value;
+    save();
+    syncToServer();
+  }
+}, 15000);
 
 // ============================================================
 // Init
@@ -1615,6 +1909,7 @@ function applyDataToUI() {
   }
   outlineEditor.value = data.outline || '';
   renderCharacters();
+  updateVersionHeader();
 }
 
 function init() {
@@ -1628,6 +1923,7 @@ function init() {
       novelId = localStorage.getItem('novelforge_novelId') || 1;
       localStorage.setItem('novelforge_novelId', novelId);
       loadFromServer();
+      setTimeout(() => fetchChapterVersions(currentIndex), 500);
     }
   });
   makeResizable('leftResize', 'left', 160, 400);
