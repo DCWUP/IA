@@ -896,42 +896,14 @@ function load() {
     try { data = JSON.parse(raw); } catch(e) { data = { chapters: [], outline: '', characters: [], rules: [] }; }
   }
   if (!data.chapters) data.chapters = [];
-  if (!data.outline) data.outline = '陆烬穿越到异世界，继承了一双能看透谎言的眼睛和少年故理的记忆，发现妹妹叶晚身披淡蓝色光晕，眉心嵌着银色长钉。原主人故理的遗愿是拯救叶晚。陆烬的生命只剩下三天，他必须在镜语阁中找到真相完成救赎。\n\n主线：\n- 陆烬适应新身体和眼睛能力\n- 调查故理死亡的真相\n- 揭开叶晚身上的秘密\n- 对抗镜语阁中的黑暗势力';
+  if (!data.outline) data.outline = '';
   if (!data.characters) data.characters = [];
   if (!data.rules) data.rules = [];
-  if (!data.chapters.length) {
-    data.chapters = getDefaultChapters();
-  } else {
-    // Merge any missing default chapters from the HTML file
-    const defaults = getDefaultChapters();
-    for (const dc of defaults) {
-      if (!data.chapters.some(c => c.title === dc.title)) {
-        data.chapters.push(dc);
-      }
-    }
-  }
-  if (!data.characters.length) {
-    data.characters = [
-      { name: '陆烬', traits: ['理性', '冷静', '执着', '背负愧疚'], desc: '主角，穿越者。前世因理性至上的逻辑思维伤害了爱人，在车祸中穿越到异世界少年故理体内。继承了故理能看透谎言的眼睛和十九年记忆，生命只剩下三天。' },
-      { name: '故理', traits: ['敏感', '善良', '孤独', '共情'], desc: '身体原主，19岁。天生觉醒能看透谎言的眼睛，因过于共情而耗尽生命。临死前将眼睛和记忆托付给陆烬，唯一的遗愿是拯救妹妹叶晚。' },
-      { name: '叶晚', traits: ['温柔', '纯粹', '脆弱', '坚韧'], desc: '故理的妹妹，瘦弱的少女。身披纯粹的淡蓝色光晕代表真实，但眉心嵌着一枚银色长钉，身上有不明秘密。是故理在这个肮脏世界中看到的唯一干净的东西。' }
-    ];
-  }
-  if (!data.rules.length) {
-    data.rules = [
-      { category: '写作风格', content: '保持简洁自然的叙述风格，避免过度修饰和"AI味"的表达。对话要自然，不要说明性对话。' },
-      { category: '人物设定', content: '陆烬：理性冷静，但内心有愧疚。故理的身体原主记忆和能力被继承。叶晚：温柔纯粹，身上有秘密。' },
-    ];
-  }
+  if (!data.novelTitle) data.novelTitle = '';
   save();
 }
 
-function getDefaultChapters() {
-  return [
-    { title: '第一章', content: `# 第一章\n\n红灯。\n\n车里很安静，只有引擎的嗡鸣。副驾上的女孩靠在窗边，她看起来累坏了。\n\n"陆烬。"她说，"我们分开一段时间吧。"\n\n他没接话。\n\n绿灯。\n\n他松开刹车，车子滑了出去。\n\n"根据我们这五年的数据来看，"他盯着前方，"分手确实是当前最优解。对双方损失最小。"\n\n他不知道副驾上的女孩，在听到这句话时，眼里的光彻底灭了。\n\n他只看见右侧冲来的渣土车。\n\n车厢被挤压的瞬间，他最后看到的，是她解脱般的表情。\n\n——我用最优解杀了她。\n\n这是他最后的念头。\n\n然后他听见了雨声。\n\n他睁眼，看见陌生的木质天花板。\n\n门被推开，一个瘦弱的少女端着药碗走进来。\n\n她身上笼着一层淡蓝色的光，眉心处钉着一枚银色的虚幻长钉。\n\n"哥，你醒了？"\n\n陆烬的脑子还没转过来，另一个声音就在意识深处响了：\n\n"别让她碰。""她在说谎。"\n\n那声音没有愤怒，只有疲惫。\n\n"救救她……用我的眼睛……和你……"\n\n潮水般的记忆涌进来。\n\n一个叫故理的少年，十九年的人生，在他面前铺开。\n\n他看见幼年的故理第一次发现父母脸上浮现出紫色的光——那是谎言的颜色。\n\n他看见少年故理在镜语阁的训练场上被教官训斥。\n\n他看见故理第一次勘案时指出真凶，主事却用一个轻飘飘的谎言就掩盖了所有。\n\n他看见故理用攒了很久的钱买了一只手镯，戴在眼前这个少女手上。那一刻，她身上没有一丝紫色杂质，只有干净的蓝。\n\n他继承了一双能看透谎言的眼睛，和一段临死前的嘱托。\n\n"小晚，信我吗？"\n\n叶晚抽泣着点头："我只有哥哥了。"\n\n"我不会死。"` },
-    { title: '第二章', content: `# 第二章\n\n陆烬跟着那个男人出了门。\n\n雨还没停，巷子里的石板路积着水。男人走得很急，雨衣的下摆啪嗒啪嗒响。\n\n"怎么死的？"陆烬问。\n\n"吊死的。在自个儿家房梁上。"\n\n王有财的家在巷子尽头，一栋灰扑扑的两层木楼。门口围了一小群人。\n\n尸体还挂在房梁上，脚悬在半空。王有财穿着一身半旧的绸衫，脸色青紫。\n\n陆烬绕着尸体走了一圈，目光扫过地面、桌子和门窗。\n\n一切看起来都很正常。上吊用的麻绳，踢翻的凳子。\n\n但他注意到一件事。\n\n死者脚上穿着一双新鞋。\n\n一个要上吊的人，会穿一双新鞋？\n\n他没有声张。\n\n逻辑溯因。\n\n他闭上眼。\n\n再睁开时，周围的一切都变了。他不是站在王有财家的堂屋里。他站在一条街上，天刚擦黑。身边有一个人——王有财。活着的王有财，正弯着腰跟什么人说话。\n\n对面那个人背对着陆烬。那人从袖子里掏出一个东西递过去——一块银色的石头。\n\n锚石。\n\n他猛地睁开眼。\n\n溯源完成。锚时消耗：四小时。\n\n他抬头，目光重新落在王有财的脚上。\n\n那双新鞋。还有那块锚石。\n\n一个想死的人，不会买新鞋，也不会在死前拿到一笔钱。\n\n"人不是自杀的。"` }
-  ];
-}
+function getDefaultChapters() { return []; }
 
 function renderOutline() {
   const tree = document.getElementById('outlineTree');
@@ -1858,6 +1830,7 @@ async function loadFromServer() {
     renderOutline();
     renderCharacters();
     renderRules();
+    updateContextBar();
     if (data.chapters.length > 0) {
       currentIndex = 0;
       editor.value = data.chapters[0].content;
@@ -2118,8 +2091,8 @@ function applyDataToUI() {
 
 function init() {
   loadTheme();
-  load();
-  applyDataToUI();
+  makeResizable('leftResize', 'left', 160, 400);
+  makeResizable('rightResize', 'right', 280, 600);
   checkBackend().then(online => {
     if (online) {
       const stored = localStorage.getItem('novelforge_novelId');
@@ -2130,10 +2103,11 @@ function init() {
         refreshBackupList();
         loadBackupConfig();
       }, 500);
+    } else {
+      load();
+      applyDataToUI();
     }
   });
-  makeResizable('leftResize', 'left', 160, 400);
-  makeResizable('rightResize', 'right', 280, 600);
 }
 
 init();
