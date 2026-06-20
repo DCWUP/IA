@@ -1,8 +1,9 @@
-import os, re, statistics
-from datetime import datetime, timezone
+import os, re, statistics, json, threading, time, glob, subprocess
+from datetime import datetime, timezone, timedelta
 from typing import Optional, List
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import pyodbc
 
@@ -317,4 +318,138 @@ def calc_aigc_rate(content: str) -> dict:
 def analyze_aigc(body: AnalyzeBody):
     return calc_aigc_rate(body.content)
 
+# ============================================================
+# Backup API
+# ============================================================
+BACKUP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'backups')
+BACKUP_CONFIG_PATH = os.path.join(BACKUP_DIR, 'config.json')
+os.makedirs(BACKUP_DIR, exist_ok=True)
+
+def load_backup_config():
+    try:
+        with open(BACKUP_CONFIG_PATH, 'r') as f:
+            return json.load(f)
+    except:
+        return {"enabled": False, "frequency": "daily", "time": "03:00", "lastBackup": None}
+
+def save_backup_config(cfg):
+    with open(BACKUP_CONFIG_PATH, 'w') as f:
+        json.dump(cfg, f, ensure_ascii=False, indent=2)
+
+def _docker_backup(filename):
+    """Run backup via docker exec + docker cp to work around bind mount issues."""
+    now = datetime.now()
+    tmp = f"/tmp/{filename}"
+    subprocess.run(
+        ["docker", "exec", "sqlserver-demo", "/opt/mssql-tools18/bin/sqlcmd",
+         "-C", "-S", "localhost", "-U", "sa", "-P", os.environ.get("DB_PASSWORD", ""),
+         "-Q", f"BACKUP DATABASE DemoDB TO DISK = N'{tmp}' WITH INIT"],
+        check=True, capture_output=True, timeout=120, text=True)
+    subprocess.run(
+        ["docker", "cp", f"sqlserver-demo:{tmp}", os.path.join(BACKUP_DIR, filename)],
+        check=True, capture_output=True, timeout=120)
+    subprocess.run(
+        ["docker", "exec", "sqlserver-demo", "rm", tmp],
+        check=True, capture_output=True, timeout=30)
+
+@app.post("/api/backup/run")
+def run_backup():
+    now = datetime.now()
+    filename = f"novel_backup_{now.strftime('%Y%m%d_%H%M%S')}.bak"
+    try:
+        _docker_backup(filename)
+        cfg = load_backup_config()
+        cfg["lastBackup"] = now.isoformat()
+        save_backup_config(cfg)
+        return {"success": True, "filename": filename, "createdAt": now.isoformat()}
+    except Exception as e:
+        raise HTTPException(500, f"备份失败: {str(e)}")
+
+@app.get("/api/backup/list")
+def list_backups():
+    files = []
+    for f in sorted(glob.glob(os.path.join(BACKUP_DIR, "*.bak")), key=os.path.getmtime, reverse=True):
+        fname = os.path.basename(f)
+        files.append({
+            "filename": fname,
+            "size": os.path.getsize(f),
+            "createdAt": datetime.fromtimestamp(os.path.getmtime(f), tz=timezone.utc).isoformat()
+        })
+    return files
+
+@app.get("/api/backup/download/{filename}")
+def download_backup(filename: str):
+    filepath = os.path.join(BACKUP_DIR, filename)
+    if not os.path.exists(filepath):
+        raise HTTPException(404, "备份文件不存在")
+    return FileResponse(filepath, filename=filename, media_type="application/octet-stream")
+
+@app.delete("/api/backup/{filename}")
+def delete_backup(filename: str):
+    filepath = os.path.join(BACKUP_DIR, filename)
+    if os.path.exists(filepath):
+        os.remove(filepath)
+    return {"success": True}
+
+class BackupConfigBody(BaseModel):
+    enabled: bool
+    frequency: str = "daily"
+    time: str = "03:00"
+
+@app.get("/api/backup/config")
+def get_backup_config():
+    return load_backup_config()
+
+@app.post("/api/backup/config")
+def set_backup_config(body: BackupConfigBody):
+    cfg = load_backup_config()
+    cfg["enabled"] = body.enabled
+    cfg["frequency"] = body.frequency
+    cfg["time"] = body.time
+    save_backup_config(cfg)
+    return {"success": True}
+
+# Background backup scheduler
+def backup_scheduler():
+    while True:
+        try:
+            cfg = load_backup_config()
+            if cfg.get("enabled"):
+                now = datetime.now()
+                parts = cfg.get("time", "03:00").split(":")
+                hour, minute = int(parts[0]), int(parts[1]) if len(parts) > 1 else 0
+                last = cfg.get("lastBackup")
+                should_run = False
+                if not last:
+                    should_run = True
+                else:
+                    last_dt = datetime.fromisoformat(last)
+                    freq = cfg.get("frequency", "daily")
+                    if freq == "daily":
+                        if (now - last_dt).total_seconds() >= 86400 and now.hour == hour and now.minute == minute:
+                            should_run = True
+                    elif freq == "weekly":
+                        if (now - last_dt).total_seconds() >= 604800 and now.hour == hour and now.minute == minute:
+                            should_run = True
+                if should_run:
+                    try:
+                        filename = f"novel_backup_{now.strftime('%Y%m%d_%H%M%S')}.bak"
+                        _docker_backup(filename)
+                        cfg["lastBackup"] = now.isoformat()
+                        save_backup_config(cfg)
+                        # Keep only last 10 backups
+                        all_backups = sorted(glob.glob(os.path.join(BACKUP_DIR, "novel_backup_*.bak")), key=os.path.getmtime)
+                        for old in all_backups[:-10]:
+                            os.remove(old)
+                    except:
+                        pass
+        except:
+            pass
+        time.sleep(60)
+
+# Start scheduler on app startup
+@app.on_event("startup")
+def start_scheduler():
+    t = threading.Thread(target=backup_scheduler, daemon=True)
+    t.start()
 

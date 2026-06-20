@@ -10,6 +10,7 @@ services:
       - "1433:1433"
     volumes:
       - sqlserver-data:/var/opt/mssql
+      - ./backups:/var/opt/mssql/backups
     networks:
       - app-network
 

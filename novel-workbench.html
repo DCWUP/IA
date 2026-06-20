@@ -574,6 +574,7 @@ body{
       <button class="right-tab" data-tab="characters" onclick="switchRightTab('characters')">&#128101; 人物</button>
       <button class="right-tab" data-tab="rules" onclick="switchRightTab('rules')">&#128220; 规则</button>
       <button class="right-tab" data-tab="versions" onclick="switchRightTab('versions')">&#128196; 版本</button>
+      <button class="right-tab" data-tab="backup" onclick="switchRightTab('backup')">&#128187; 备份</button>
     </div>
     <div class="right-panel-body">
       <!-- Preview -->
@@ -617,6 +618,33 @@ body{
           </div>
           <div class="diff-content" id="diffContent"></div>
         </div>
+      </div>
+      <!-- Backup -->
+      <div id="rightBackup">
+        <div class="backup-header" style="display:flex;align-items:center;justify-content:space-between;padding:0 0 10px;border-bottom:1px solid var(--border);margin-bottom:10px">
+          <span><b>数据库备份</b></span>
+          <button class="btn btn-sm btn-primary" onclick="runBackup()" id="backupRunBtn">&#128190; 立即备份</button>
+        </div>
+        <div style="margin-bottom:12px;padding:10px;background:var(--surface2);border-radius:var(--radius);font-size:13px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <span>自动备份</span>
+            <label style="position:relative;display:inline-block;width:36px;height:20px">
+              <input type="checkbox" id="backupEnabled" onchange="saveBackupConfig()" style="opacity:0;width:0;height:0">
+              <span style="position:absolute;cursor:pointer;inset:0;background:var(--border);border-radius:10px;transition:.3s" id="backupToggle"></span>
+            </label>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <select id="backupFrequency" onchange="saveBackupConfig()" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px">
+              <option value="daily">每天</option>
+              <option value="weekly">每周</option>
+            </select>
+            <span style="font-size:12px;color:var(--text2)">执⾏时间</span>
+            <input type="time" id="backupTime" value="03:00" onchange="saveBackupConfig()" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px">
+            <span style="font-size:11px;color:var(--text2)" id="lastBackupTime">上次备份：无</span>
+          </div>
+        </div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:6px">备份文件列表</div>
+        <div id="backupFileList" style="font-size:12px;color:var(--text2)">暂无备份</div>
       </div>
     </div>
   </div>
@@ -1987,35 +2015,83 @@ function aigcBadgeHtml(rate) {
 }
 
 // ============================================================
-// Context bar (show outline + rules during writing)
+// Backup
 // ============================================================
-function updateContextBar() {
-  const bar = document.getElementById('contextBar');
-  if (!bar) return;
-  if (!data.outline && !data.rules.length) { bar.classList.remove('show'); return; }
-  bar.classList.add('show');
-  let html = '';
-  if (data.outline) {
-    const short = data.outline.length > 100 ? data.outline.substring(0, 100) + '…' : data.outline;
-    html += `<div class="ctx-section"><span class="ctx-label">大纲</span><span class="ctx-text">${escHtml(short)}</span></div>`;
+async function runBackup() {
+  if (!backendOnline) { showToast('服务器离线'); return; }
+  const btn = document.getElementById('backupRunBtn');
+  btn.disabled = true; btn.textContent = '备份中…';
+  try {
+    const res = await fetch(API_BASE + '/backup/run', { method: 'POST' });
+    if (!res.ok) throw new Error('备份失败');
+    const data = await res.json();
+    showToast('备份成功: ' + data.filename);
+    refreshBackupList();
+    loadBackupConfig();
+  } catch(e) {
+    showToast('备份失败: ' + e.message);
   }
-  if (data.rules.length) {
-    const rulesHtml = data.rules.map(r => {
-      const label = r.category ? `[${escHtml(r.category)}] ` : '';
-      const text = r.content.length > 60 ? r.content.substring(0, 60) + '…' : r.content;
-      return `<span class="ctx-rule">${label}${escHtml(text)}</span>`;
-    }).join('');
-    html += `<div class="ctx-section"><span class="ctx-label">规则</span>${rulesHtml}</div>`;
-  }
-  bar.innerHTML = html;
+  btn.disabled = false; btn.textContent = '📀 立即备份';
 }
 
-// ============================================================
-// Version header (keep for backward compat)
-// ============================================================
-function updateVersionHeader() {
-  const el = document.getElementById('versionHeader');
-  if (el) el.textContent = data.chapters[currentIndex]?.title || '';
+async function refreshBackupList() {
+  if (!backendOnline) return;
+  try {
+    const res = await fetch(API_BASE + '/backup/list');
+    const files = await res.json();
+    const el = document.getElementById('backupFileList');
+    if (!files.length) { el.innerHTML = '<span style="color:var(--text2)">暂无备份</span>'; return; }
+    el.innerHTML = files.map(f => {
+      const d = new Date(f.createdAt);
+      const size = f.size > 1024*1024 ? (f.size/1024/1024).toFixed(1)+' MB' : (f.size/1024).toFixed(1)+' KB';
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">
+        <span>${f.filename}</span>
+        <span style="color:var(--text2);font-size:11px">${size} ${d.toLocaleDateString()} ${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>
+        <span>
+          <a href="${API_BASE}/backup/download/${encodeURIComponent(f.filename)}" style="font-size:12px;color:var(--accent);text-decoration:none;margin-right:6px" download>下载</a>
+          <button onclick="deleteBackup('${f.filename}')" style="background:none;border:none;cursor:pointer;color:#ff6b6b;font-size:12px">删除</button>
+        </span>
+      </div>`;
+    }).join('');
+  } catch {}
+}
+
+async function deleteBackup(filename) {
+  if (!confirm('确定删除备份文件 ' + filename + ' ？')) return;
+  try {
+    await fetch(API_BASE + '/backup/' + encodeURIComponent(filename), { method: 'DELETE' });
+    refreshBackupList();
+    showToast('已删除');
+  } catch {}
+}
+
+async function loadBackupConfig() {
+  if (!backendOnline) return;
+  try {
+    const res = await fetch(API_BASE + '/backup/config');
+    const cfg = await res.json();
+    document.getElementById('backupEnabled').checked = cfg.enabled || false;
+    document.getElementById('backupFrequency').value = cfg.frequency || 'daily';
+    document.getElementById('backupTime').value = cfg.time || '03:00';
+    const toggle = document.getElementById('backupToggle');
+    toggle.style.background = cfg.enabled ? 'var(--accent)' : 'var(--border)';
+    document.getElementById('lastBackupTime').textContent = cfg.lastBackup ? '上次备份：' + new Date(cfg.lastBackup).toLocaleString() : '上次备份：无';
+  } catch {}
+}
+
+async function saveBackupConfig() {
+  if (!backendOnline) return;
+  const enabled = document.getElementById('backupEnabled').checked;
+  const frequency = document.getElementById('backupFrequency').value;
+  const time = document.getElementById('backupTime').value;
+  const toggle = document.getElementById('backupToggle');
+  toggle.style.background = enabled ? 'var(--accent)' : 'var(--border)';
+  try {
+    await fetch(API_BASE + '/backup/config', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled, frequency, time })
+    });
+  } catch {}
 }
 
 // ============================================================
@@ -2051,6 +2127,8 @@ function init() {
       loadFromServer();
       setTimeout(() => {
         if (currentIndex >= 0) fetchChapterVersions(currentIndex);
+        refreshBackupList();
+        loadBackupConfig();
       }, 500);
     }
   });
