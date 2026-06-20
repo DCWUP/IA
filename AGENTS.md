@@ -64,7 +64,26 @@ git commit -m "说明"
 git push origin main
 ```
 
-## 插件
+## 插件 / AI 续写
 
-- `.opencode.json`: `opencode-storyclaw`, `opencode-novel-plugin`
-- 安装: `npm install -g opencode-storyclaw opencode-novel-plugin`
+- `.opencode.json`: `opencode-storyclaw`, `opencode-novel-plugin`, `opencode-ai-novel-factory`
+- 安装: `npm install -g opencode-storyclaw opencode-novel-plugin opencode-ai-novel-factory`
+
+## Novel Writer Agent
+
+项目内置了小说续写 agent，任何 opencode 会话启动时自动生效：
+
+```
+.opencode/
+├── agent/novel-writer.json       # agent 定义
+├── instructions/novel-agent.md   # 系统指令（会话默认读取）
+└── skills/novel-writer/          # 可复用的续写技能
+```
+
+**工作流**：
+1. 会话启动 → AI 自动 `GET /api/novels` 列出小说，询问"你要续写哪本？"
+2. 用户选定 → AI 加载大纲、章节、人物、规则
+3. 用户给出续写指令 → AI 遵守规则续写，用户确认后保存
+4. 每个会话独立管理一本小说，可随时切换
+
+**注意**：需要 nginx 和 FastAPI 后端运行（`docker compose up -d` + FastAPI 在 8000 端口）

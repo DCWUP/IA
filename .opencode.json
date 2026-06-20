@@ -1,3 +1,18 @@
 {
-  "plugin": ["opencode-storyclaw", "opencode-novel-plugin", "opencode-ai-novel-factory"]
+  "plugin": ["opencode-storyclaw", "opencode-novel-plugin", "opencode-ai-novel-factory"],
+  "instructions": ".opencode/instructions/novel-agent.md",
+  "agent": {
+    "novel-writer": {
+      "description": "小说续写助手 — 自动加载大纲、规则、人物，按规则续写",
+      "instructions": ".opencode/instructions/novel-agent.md",
+      "skills": ["novel-writer"]
+    }
+  },
+  "skill": [
+    {
+      "name": "novel-writer",
+      "description": "小说续写技能 - 基于现有规则和大纲续写小说章节",
+      "instructions": ".opencode/skills/novel-writer/instructions.md"
+    }
+  ]
 }
